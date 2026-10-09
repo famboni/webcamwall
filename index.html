@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f5ef"><title>Robyn's Reading Room — your reading life</title>
+<link rel="stylesheet" href="styles.css?v=1.0.1">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="Robyn's Reading Room home"><span class="brand-mark">r</span><span class="brand-name">Robyn's Reading Room<small>YOUR READING LIFE</small></span></a>
+    <div class="side-label">YOUR LIBRARY</div>
+    <nav id="filters" aria-label="Library filters">
+      <button class="nav-item active" data-filter="all"><span>▦</span> All books <b class="count-badge" id="count-all" aria-label="All books count">0</b></button>
+      <button class="nav-item" data-filter="want"><span>＋</span> Want to read <b class="count-badge" id="count-want" aria-label="Want to read count">0</b></button>
+      <button class="nav-item" data-filter="reading"><span>◷</span> Reading <b class="count-badge" id="count-reading" aria-label="Reading count">0</b></button>
+      <button class="nav-item" data-filter="read"><span>✓</span> Read <b class="count-badge" id="count-read" aria-label="Read count">0</b></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="sync-dot"></div><div><strong id="account-label">Local preview</strong><small id="sync-label">Saved in this browser</small></div><button id="account-btn" class="account-btn" title="Account">↗</button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><div class="eyebrow">A LITTLE SPACE FOR BIG STORIES</div><h1 id="page-title">Robyn's Reading Room<span>✳</span></h1></div><button id="add-btn" class="primary"><span>＋</span> Add a book</button></header>
+    <section class="toolbar"><div class="section-heading"><div><div class="eyebrow">THE COLLECTION</div><h2 id="collection-title">All your books <span id="visible-count">0</span></h2></div><div class="view-toggle"><button class="view active" title="Grid view">▦</button><button class="view" title="List view">☷</button></div></div>
+    <div class="search-row"><label class="searchbox"><span>⌕</span><input id="library-search" placeholder="Search your library…" autocomplete="off"><kbd>⌘ K</kbd></label><button class="outline" id="discover-btn">⌕ <span>Find a book</span></button><button class="sort-button" id="sort-btn">Recently added⌄</button></div></section>
+    <section id="book-grid" class="book-grid" aria-live="polite"></section>
+    <section id="empty-state" class="empty-state"><div class="empty-icon">✳</div><h3>Your next favourite might be here.</h3><p>Add a book you’ve read, are reading, or can’t wait to start.</p><button class="primary" id="empty-add">＋ Find your first book</button></section>
+    <footer><span>Made for the love of a good story.</span><div class="footer-actions"><button id="privacy-btn">Privacy &amp; support</button><button id="deletion-btn">Account deletion</button><button id="export-btn">Export my library ↓</button></div></footer>
+  </main>
+</div>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-backdrop"></div><div class="modal-card"><button class="close" id="close-modal" aria-label="Close">×</button><div id="modal-content"></div></div></div>
+<div id="toast" class="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=1.0.1"></script>
+</body></html>

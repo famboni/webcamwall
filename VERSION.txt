@@ -1,0 +1,5 @@
+Robyn's Reading Room
+Version: 1.0.1
+Release type: Testing build
+
+This build includes the latest library-count refresh and sign-in modal fixes.
