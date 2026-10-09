@@ -1,34 +1,1626 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-NZ">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f7f5ef"><title>Robyn's Reading Room — your reading life</title>
-<link rel="stylesheet" href="styles.css?v=1.0.1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Webcam Wall</title>
+<meta name="description" content="Search New Zealand webcams, pin them to your own wall, and give each one your own title.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b23; --panel-2:#1b222c; --line:#252d38; --line-soft:#1e252e;
+    --txt:#e6edf3; --dim:#a3b1c2; --dim-2:#8496a8;
+    --accent:#2dd4bf; --accent-ink:#04211d;
+    --road:#60a5fa; --windy:#f472b6; --yt:#f87171; --custom:#c084fc; --local:#fbbf24;
+    --r:12px; --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  [hidden]{display:none !important}      /* wins over .btn{display:inline-flex} */
+  button{cursor:pointer;background:none;border:0}
+  a{color:var(--accent)}
+  .muted{color:var(--dim)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- header ---------- */
+  .app-header{
+    position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:12px;
+    padding:10px 16px; background:rgba(13,17,23,.9); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:.2px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+  .brand-copy{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+  .brand-line{display:flex;align-items:baseline;gap:5px;min-width:0}
+  .brand-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand-version{flex:0 0 auto;color:var(--dim-2);font-size:11px;line-height:1;font-weight:500;letter-spacing:0;white-space:nowrap}
+  .brand small{display:block;font-weight:400;font-size:11px;color:var(--dim-2);letter-spacing:.3px}
+  .header-spacer{flex:1}
+  .btn svg{display:block;flex-shrink:0;width:18px;height:18px}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:10px;
+    border:1px solid var(--line); background:var(--panel); color:var(--txt);
+    transition:background .15s,border-color .15s,transform .05s; white-space:nowrap;
+  }
+  .btn:hover{background:var(--panel-2);border-color:#33404f}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+  .btn.primary:hover{background:#5eead4}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:8px 12px;font-size:14px;border-radius:9px}
+  /* Bigger targets for the main actions */
+  .btn.lg{padding:13px 18px;font-size:17px;border-radius:13px;gap:10px;min-height:52px;font-weight:650}
+  .btn.lg svg{width:21px;height:21px}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  /* ---------- layout ---------- */
+  :root{ --head-h:74px }                 /* kept in sync with the header by JS */
+  .view{display:block}
+  .view[hidden]{display:none}
+  .wall{padding:16px;min-width:0;max-width:1900px;margin:0 auto}
+
+  /* ---------- search page ---------- */
+  .search-page{max-width:1900px;margin:0 auto;padding:0 20px 10px}
+  .search-top{
+    position:sticky;top:var(--head-h);z-index:25;background:var(--bg);
+    padding:16px 0 14px;display:flex;flex-direction:column;gap:13px;
+    border-bottom:1px solid var(--line-soft);margin-bottom:20px;
+  }
+  .search-top .lead-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .search-top .lead-row .field{flex:1 1 380px;min-width:0}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .card{
+    display:flex;flex-direction:column;overflow:hidden;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--r);
+  }
+  .card:hover{border-color:#33404f}
+  .card.added{border-color:rgba(45,212,191,.45);background:rgba(45,212,191,.05)}
+  .card .thumb{width:100%;aspect-ratio:16/9;object-fit:cover;background:#0b0f14;display:block}
+  .card .body{padding:12px 13px 13px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .card .name{font-size:17px;font-weight:650;line-height:1.3}
+  .card .sub{font-size:14px;color:var(--dim-2)}
+  .card .foot{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:10px}
+  .card .foot .add-btn{margin-left:auto}
+
+  /* ---------- search ---------- */
+  .field{position:relative}
+  .field svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.55;width:22px;height:22px}
+  .field input{
+    width:100%;padding:16px 16px 16px 52px;border-radius:13px;border:1px solid var(--line);
+    background:var(--panel-2);outline:none;font-size:17px;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+  /* Filters stay on a single line: they shrink, then scroll sideways on very
+     narrow phones rather than wrapping. */
+  .chips{display:flex;gap:7px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;
+    scrollbar-width:none;-ms-overflow-style:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{
+    flex:0 0 auto;white-space:nowrap;min-height:36px;
+    padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2);
+    font-size:13.5px;color:var(--dim);
+  }
+  .chip[aria-pressed="true"]{background:var(--accent);border-color:transparent;color:var(--accent-ink);font-weight:600}
+  /* Phones: trim a little more so all four filters fit without sideways scroll */
+  @media (max-width:480px){
+    .chips{gap:6px}
+    .chip{padding:7px 11px;font-size:13px}
+  }
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  label.check{display:flex;align-items:center;gap:9px;font-size:14.5px;color:var(--dim);cursor:pointer}
+  label.check input{width:18px;height:18px}
+  label.check input{accent-color:var(--accent)}
+
+.badge{
+    display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;
+    letter-spacing:.3px;text-transform:uppercase;border:1px solid transparent;
+  }
+  .badge.road{color:var(--road);background:rgba(96,165,250,.12);border-color:rgba(96,165,250,.3)}
+  .badge.windy{color:var(--windy);background:rgba(244,114,182,.12);border-color:rgba(244,114,182,.3)}
+  .badge.youtube{color:var(--yt);background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.3)}
+  .badge.custom{color:var(--custom);background:rgba(192,132,252,.12);border-color:rgba(192,132,252,.3)}
+  .badge.web{color:var(--local);background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.32)}
+  .add-btn{padding:12px 18px;border-radius:10px;border:1px solid var(--line);font-size:16px;font-weight:600;
+    background:var(--panel);min-height:46px;min-width:82px}
+  .add-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .add-btn.added{border-color:transparent;background:rgba(45,212,191,.14);color:var(--accent);cursor:default}
+  .list-note{font-size:14.5px;color:var(--dim-2);padding:8px 3px;line-height:1.5}
+  .sources{font-size:13.5px;color:var(--dim-2);line-height:1.5}
+  .src-row{display:flex;align-items:baseline;gap:9px;padding:8px 0;border-bottom:1px solid var(--line-soft);
+    font-size:14.5px;flex-wrap:wrap}
+  .src-row:last-child{border-bottom:0}
+  .src-row .n{margin-left:auto;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .panel{border:1px solid var(--line);border-radius:var(--r);padding:11px;background:var(--panel-2)}
+  .panel h3{margin:0 0 8px;font-size:15.5px;letter-spacing:.2px}
+  .panel p{margin:7px 0;font-size:14px;color:var(--dim);line-height:1.5}
+  .panel input{width:100%;padding:12px 13px;border-radius:10px;border:1px solid var(--line);background:#0f141a;outline:none;font-size:16px}
+  .panel input:focus{border-color:var(--accent)}
+  .panel .actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .status{font-size:14px;margin-top:9px;line-height:1.5}
+  .status.ok{color:var(--accent)} .status.err{color:#fca5a5}
+
+  /* ---------- wall / tiles ---------- */
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+  .tile{
+    grid-column:span 3; display:flex;flex-direction:column;overflow:hidden;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    transition:border-color .15s;
+  }
+  .tile[data-size="s"]{grid-column:span 2}
+  .tile[data-size="l"]{grid-column:span 6}
+  .tile.dragging{opacity:.45}
+  .tile.drop-target{border-color:var(--accent);box-shadow:0 0 0 2px rgba(45,212,191,.25)}
+  .tile-head{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line-soft)}
+  .tile-title{
+    flex:1 1 auto;min-width:0;background:transparent;border:1px solid transparent;border-radius:8px;
+    padding:6px 8px;font-weight:650;font-size:16.5px;text-overflow:ellipsis;
+  }
+  .tile-title:hover{border-color:var(--line)}
+  .tile-title:focus{border-color:var(--accent);background:#0f141a;outline:none}
+  .grip{cursor:grab;color:var(--dim-2);padding:3px 4px;line-height:1;user-select:none;letter-spacing:-2px;font-size:18px;font-family:monospace}
+  .grip:active{cursor:grabbing}
+  .tools{display:flex;gap:1px;flex-shrink:0;margin-left:2px}
+  .tools button{
+    width:34px;height:34px;border-radius:9px;color:var(--dim);display:grid;place-items:center;font-size:15px;
+  }
+  .tools button svg{display:block;width:20px;height:20px}
+  .tools button:hover{background:var(--panel-2);color:var(--txt)}
+  .tools button.danger:hover{color:#fca5a5}
+  .tile-media{position:relative;aspect-ratio:16/9;background:#070a0e;overflow:hidden}
+  .tile[data-size="s"] .tile-media{aspect-ratio:4/3}
+  .tile-media img,.tile-media iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;object-fit:cover}
+  .tile-media .state{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;padding:16px;text-align:center;font-size:12.5px;color:var(--dim);
+  }
+  .tile-media .state b{color:var(--txt);font-size:13px}
+  .tile-foot{display:flex;align-items:center;gap:8px;padding:8px 11px;font-size:13px;color:var(--dim-2);
+    border-top:1px solid var(--line-soft);min-height:38px}
+  .tile-foot .sp{flex:1}
+  .tile-foot a{color:var(--dim);text-decoration:none}
+  .tile-foot a:hover{color:var(--accent)}
+  .offline-dot{color:#fbbf24}
+  .empty{
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    border:1px dashed var(--line);border-radius:var(--r);padding:60px 20px;text-align:center;color:var(--dim);
+  }
+  .empty.show{display:flex}
+  .empty h2{margin:0;font-size:22px;color:var(--txt)}
+  .empty p{margin:0;max-width:560px;font-size:15px;line-height:1.6}
+  kbd{background:var(--panel-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;font-size:11.5px}
+
+  /* ---------- modal ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(2,5,9,.7);display:none;z-index:60;align-items:center;justify-content:center;padding:16px}
+  .backdrop.show{display:flex}
+  .modal{width:100%;max-width:560px;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+  .modal hr{border:0;border-top:1px solid var(--line);margin:20px 0 14px}
+  .modal h3{margin:0 0 8px;font-size:17px}
+  .modal .hint{font-size:13.5px;color:var(--dim-2);margin:8px 0 0;line-height:1.5}
+  .modal .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .modal h2{margin:0 0 6px;font-size:21px}
+  .modal p{margin:0 0 14px;font-size:14.5px;color:var(--dim);line-height:1.5}
+  .modal label{display:block;font-size:14.5px;color:var(--dim);margin:14px 0 6px;font-weight:600}
+  .modal input[type=text],.modal input[type=url]{width:100%;padding:13px 14px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2);outline:none;font-size:16.5px}
+  .modal input:focus{border-color:var(--accent)}
+  .modal textarea{
+    display:block;width:100%;min-height:132px;resize:vertical;padding:12px;border-radius:11px;
+    border:1px solid var(--line);background:#0f141a;color:var(--txt);
+    font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere;
+  }
+  .modal textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+  .seg{display:flex;gap:6px;margin-top:6px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  .tile.flash{animation:flash 1.8s ease-out}
+  @keyframes flash{
+    0%{box-shadow:0 0 0 4px var(--accent),var(--shadow)}
+    60%{box-shadow:0 0 0 4px rgba(45,212,191,.5),var(--shadow)}
+    100%{box-shadow:var(--shadow)}
+  }
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(12px);opacity:0;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:13px;
+    box-shadow:var(--shadow);z-index:80;transition:.2s;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .app-footer{padding:12px 16px 26px;color:var(--dim-2);font-size:12.5px;line-height:1.7}
+  .app-footer a{color:var(--dim-2);text-decoration:underline}
+  /* Credits: one quiet line by default, tap to open. Keeps the footer from
+     eating a third of a phone screen while the attribution stays reachable. */
+  .credits summary{cursor:pointer;display:inline-flex;align-items:center;gap:9px;
+    padding:6px 0;min-height:34px;list-style:none;font-size:12.5px}
+  .credits summary::-webkit-details-marker{display:none}
+  .credits summary::after{content:"";width:7px;height:7px;flex:0 0 auto;
+    border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;
+    transform:rotate(45deg);margin-top:-3px;transition:transform .18s}
+  .credits[open] summary::after{transform:rotate(-135deg);margin-top:3px}
+  .credits p{margin:6px 0 0;max-width:70ch}
+  .only-mobile{display:none}
+
+  @media (max-width:1000px){
+    .tile{grid-column:span 6 !important}
+    .wall{padding:12px}
+    .search-page{padding:0 12px 10px}
+    .cards{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  }
+  @media (max-width:900px){
+    .brand small{display:none}
+    .header-actions .label{display:none}
+    .btn.lg{padding:0 14px;min-width:52px;justify-content:center}
+    .home-btn .label{display:inline}          /* keep "Home" readable on phones */
+    .home-btn{padding:0 16px}
+  }
+  /* Phones: keep the header on one line and give tile titles their own row */
+  @media (max-width:640px){
+    .app-header{padding:8px 10px;gap:8px}
+    .app-footer{padding:8px 12px 14px}
+    .credits summary,.credits p{font-size:11.5px}
+    body[data-view="search"] .brand{display:none}   /* room for Home + search field */
+    .header-actions{gap:8px !important}
+    .brand{min-width:0;font-size:14px;overflow:hidden;gap:7px}
+    .brand .dot{width:9px;height:9px}          /* keep the name readable beside its version */
+    .brand-copy,.brand-line{min-width:0}
+    .brand-name{font-size:14px}
+    .brand-version{font-size:10px}
+    /* Phones: title and the six tile tools share one line, so a tile is
+       ~50px shorter. Only if the row genuinely cannot fit (<=320px) do the
+       tools wrap onto their own line, as before. */
+    .tile-head{flex-wrap:wrap;row-gap:5px;padding:6px 8px;gap:4px}
+    .grip{display:none}                      /* drag reorder needs a mouse; ‹ › buttons remain */
+    .tile-title{flex:1 1 100px;min-width:0;font-size:14.5px;padding:4px 6px}
+    .tools{width:auto;flex:0 0 auto;justify-content:flex-end;margin-left:auto;gap:2px}
+    .tools button{width:32px;height:32px;border-radius:8px}
+    .tools button svg{width:19px;height:19px}
+    .tile-foot{padding:6px 9px;font-size:12px}
+  }
+  /* Leave room for the visible version label without shrinking the large actions. */
+  @media (max-width:420px){
+    .app-header{padding-left:8px;padding-right:8px;gap:6px}
+    .header-actions{gap:6px !important}
+    .brand{gap:5px}
+    .brand-version{font-size:9px}
+  }
+  /* Very narrow phones: the four big header buttons leave little room, so drop
+     the decorative status dot and tighten the gaps to keep the brand legible. */
+  @media (max-width:380px){
+    .app-header{padding-left:6px;padding-right:6px;gap:4px}
+    .header-actions{gap:4px !important}
+    .brand{gap:0;font-size:13.5px}
+    .brand-line{gap:3px}
+    .brand .dot{display:none}
+  }
+</style>
 </head>
 <body>
-<div class="shell">
-  <aside class="sidebar">
-    <a class="brand" href="#" aria-label="Robyn's Reading Room home"><span class="brand-mark">r</span><span class="brand-name">Robyn's Reading Room<small>YOUR READING LIFE</small></span></a>
-    <div class="side-label">YOUR LIBRARY</div>
-    <nav id="filters" aria-label="Library filters">
-      <button class="nav-item active" data-filter="all"><span>▦</span> All books <b class="count-badge" id="count-all" aria-label="All books count">0</b></button>
-      <button class="nav-item" data-filter="want"><span>＋</span> Want to read <b class="count-badge" id="count-want" aria-label="Want to read count">0</b></button>
-      <button class="nav-item" data-filter="reading"><span>◷</span> Reading <b class="count-badge" id="count-reading" aria-label="Reading count">0</b></button>
-      <button class="nav-item" data-filter="read"><span>✓</span> Read <b class="count-badge" id="count-read" aria-label="Read count">0</b></button>
-    </nav>
-    <div class="sidebar-bottom"><div class="sync-dot"></div><div><strong id="account-label">Local preview</strong><small id="sync-label">Saved in this browser</small></div><button id="account-btn" class="account-btn" title="Account">↗</button></div>
-  </aside>
-  <main class="main">
-    <header class="topbar"><div><div class="eyebrow">A LITTLE SPACE FOR BIG STORIES</div><h1 id="page-title">Robyn's Reading Room<span>✳</span></h1></div><button id="add-btn" class="primary"><span>＋</span> Add a book</button></header>
-    <section class="toolbar"><div class="section-heading"><div><div class="eyebrow">THE COLLECTION</div><h2 id="collection-title">All your books <span id="visible-count">0</span></h2></div><div class="view-toggle"><button class="view active" title="Grid view">▦</button><button class="view" title="List view">☷</button></div></div>
-    <div class="search-row"><label class="searchbox"><span>⌕</span><input id="library-search" placeholder="Search your library…" autocomplete="off"><kbd>⌘ K</kbd></label><button class="outline" id="discover-btn">⌕ <span>Find a book</span></button><button class="sort-button" id="sort-btn">Recently added⌄</button></div></section>
-    <section id="book-grid" class="book-grid" aria-live="polite"></section>
-    <section id="empty-state" class="empty-state"><div class="empty-icon">✳</div><h3>Your next favourite might be here.</h3><p>Add a book you’ve read, are reading, or can’t wait to start.</p><button class="primary" id="empty-add">＋ Find your first book</button></section>
-    <footer><span>Made for the love of a good story.</span><div class="footer-actions"><button id="privacy-btn">Privacy &amp; support</button><button id="deletion-btn">Account deletion</button><button id="export-btn">Export my library ↓</button></div></footer>
-  </main>
+
+<header class="app-header">
+  <button class="btn lg primary home-btn" id="btn-home" hidden title="Back to my wall">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></svg>
+    <span class="label">Home</span></button>
+  <button class="brand" id="brand" title="Back to my wall">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="brand-copy">
+      <span class="brand-line"><span class="brand-name">Webcam Wall</span><span class="brand-version" id="brand-version"></span></span>
+      <small id="cam-count-head">no cameras pinned yet</small>
+    </span>
+  </button>
+  <div class="header-spacer"></div>
+  <div class="header-actions" style="display:flex;gap:10px">
+    <button class="btn lg primary" id="btn-search" title="Search all New Zealand cameras">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="label">Search cameras</span></button>
+    <button class="btn lg" id="btn-refresh-all" title="Load fresh frames for every camera">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.7-4"/><path d="M13.5 1.5v3h-3"/></svg>
+      <span class="label">Refresh all</span></button>
+    <button class="btn lg" id="btn-add-url" title="Add a camera by URL or embed code">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+      <span class="label">Add camera</span></button>
+    <button class="btn lg" id="btn-settings" title="Settings and API keys">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.54a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
+      <span class="label">Settings</span></button>
+  </div>
+</header>
+
+<!-- ============ VIEW: HOME (your wall) ============ -->
+<main class="view wall" id="view-home">
+    <div class="grid" id="grid"></div>
+
+    <div class="empty show" id="empty">
+      <h2>Your webcam wall is empty</h2>
+      <p>Press <b>Search cameras</b> to browse every New Zealand camera, then press <b>Add</b> on the ones you want.
+         Each camera you add lands here, and you can click its title to name it something you'll recognise at a glance.</p>
+      <button class="btn lg primary" id="btn-search-empty" style="margin-top:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search cameras</button>
+      <p class="muted" style="font-size:13px">Tip: use the <b>refresh</b> button on a tile for a fresh frame, <b>Refresh all</b> in the header for every camera at once, and the <b>expand</b> button to fill the screen with one.</p>
+    </div>
+
+    <footer class="app-footer">
+      <details class="credits">
+        <summary>Credits — NZTA (CC BY 4.0) · Windy · more</summary>
+        <p>
+          Road camera images © <a href="https://www.nzta.govt.nz/traffic-and-travel-information/use-our-data/" target="_blank" rel="noopener">NZ Transport Agency Waka Kotahi</a> (CC BY 4.0) — snapshots, not live video.
+          Windy webcam data by <a href="https://www.windy.com" target="_blank" rel="noopener">Windy.com</a>.<br>
+          Local cams listed by <a href="https://online-australia.net/nz" target="_blank" rel="noopener">online-australia.net</a>, images hosted by each camera's own operator.
+          Live video is embedded from the channels' own YouTube streams.
+          A personal viewer, not affiliated with any of them.
+        </p>
+      </details>
+    </footer>
+</main>
+
+<!-- ============ VIEW: SEARCH (full page) ============ -->
+<main class="view" id="view-search" hidden>
+  <div class="search-page">
+    <div class="search-top">
+      <div class="lead-row">
+        <div class="field">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Search NZ cameras"
+                 autocomplete="off" aria-label="Search cameras">
+        </div>
+        <span class="muted" id="result-count" style="font-size:15px;white-space:nowrap"></span>
+      </div>
+
+      <div class="row-between" style="flex-wrap:wrap;gap:12px;align-items:center">
+        <div class="chips" role="group" aria-label="Filter by source">
+          <button class="chip" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" data-filter="nzta" aria-pressed="false">Road cams</button>
+          <button class="chip" data-filter="youtube" aria-pressed="false">Live video</button>
+          <button class="chip" data-filter="web" aria-pressed="false">Local cams</button>
+        </div>
+        <label class="check"><input type="checkbox" id="hide-offline" checked> Hide offline road cams</label>
+      </div>
+    </div>
+
+    <div class="cards" id="results" role="list"></div>
+
+    <footer class="app-footer" style="padding-left:0;padding-right:0">
+      <span id="results-note"></span><br>
+      Adding a camera takes you back to your wall. Press <b>Home</b> (top left) or the browser's Back button any time.
+    </footer>
+  </div>
+</main>
+
+<!-- ============ Add-by-URL modal ============ -->
+<div class="backdrop" id="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 id="modal-title">Add a camera by URL</h2>
+    <p>Works with any direct image URL, or a YouTube / iframe embed link.</p>
+    <label for="m-title">Title</label>
+    <input type="text" id="m-title" placeholder="e.g. Whakatāne river mouth">
+    <label for="m-url">URL or &lt;iframe&gt; embed code</label>
+    <input type="text" id="m-url" placeholder="https://example.com/cam.jpg  •  https://youtu.be/xxxx  •  <iframe src=…>">
+    <label>Type</label>
+    <div class="seg">
+      <button class="chip" data-type="auto" aria-pressed="true">Auto-detect</button>
+      <button class="chip" data-type="image" aria-pressed="false">Still image</button>
+      <button class="chip" data-type="embed" aria-pressed="false">Embed (iframe)</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="m-cancel">Cancel</button>
+      <button class="btn primary" id="m-save">Add camera</button>
+    </div>
+  </div>
 </div>
-<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-backdrop"></div><div class="modal-card"><button class="close" id="close-modal" aria-label="Close">×</button><div id="modal-content"></div></div></div>
-<div id="toast" class="toast" role="status"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1.0.1"></script>
-</body></html>
+
+<!-- ============ Settings / API keys modal ============ -->
+<div class="backdrop" id="settings-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <h2 id="settings-title">Settings</h2>
+    <p>API keys are stored in this browser only — they are never sent anywhere except to the service they belong to.</p>
+
+    <h3>Windy webcams API key</h3>
+    <label for="windy-key">Key</label>
+    <input id="windy-key" type="text" autocomplete="off" spellcheck="false" aria-label="Windy API key">
+    <p class="hint">A key is already filled in for you, so Windy works out of the box. To use your own instead,
+      get a free key at <a href="https://api.windy.com/keys" target="_blank" rel="noopener">api.windy.com/keys</a>
+      (choose the <b>Webcams</b> API), paste it above and press <b>Save &amp; connect</b>.</p>
+    <div class="actions">
+      <button class="btn primary" id="btn-windy-connect">Save &amp; connect</button>
+      <button class="btn" id="btn-windy-load">Reload Windy list</button>
+      <button class="btn ghost" id="btn-windy-default">Use built-in key</button>
+      <button class="btn ghost" id="btn-windy-forget">Forget key</button>
+    </div>
+    <div class="status" id="windy-status"></div>
+
+    <hr>
+    <h3>Camera sources</h3>
+    <div id="src-list"></div>
+    <p class="hint">Local cams come from the public
+      <a href="https://online-australia.net/nz" target="_blank" rel="noopener">online-australia.net</a>
+      NZ webcam directory — council, surf-club and community cameras that NZTA and Windy don't cover.
+      Each image stays hosted by whoever runs that camera, and every tile links back to its source.</p>
+
+    <hr>
+    <h3>Your wall</h3>
+    <p class="hint" style="margin-top:0">Your layout is stored in this browser. Create a portable copy here to move it
+      to another browser or device. Removing every camera leaves your settings alone.</p>
+
+    <h3 style="margin-top:16px">Backup &amp; restore</h3>
+    <p class="hint" style="margin-top:0">The backup includes your pinned cameras, titles, order, tile sizes, display preferences,
+      and custom-camera URLs. Your Windy API key and temporary camera-list cache are never included.</p>
+    <div class="actions">
+      <button class="btn primary" id="btn-backup-create">Create backup</button>
+      <button class="btn" id="btn-backup-copy" hidden>Copy backup</button>
+      <button class="btn" id="btn-backup-download" hidden>Download .json</button>
+    </div>
+    <label for="backup-text">Backup text — generated here, or paste one here to restore</label>
+    <textarea id="backup-text" rows="5" spellcheck="false" autocapitalize="off" autocomplete="off"
+      placeholder="Choose Create backup to make a copy, or paste backup text here."></textarea>
+    <div class="actions">
+      <button class="btn primary" id="btn-backup-restore" disabled>Restore backup</button>
+      <button class="btn" id="btn-backup-file">Restore from file…</button>
+      <input id="backup-file" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="status" id="backup-status" role="status" aria-live="polite"></div>
+    <p class="hint">Restoring replaces the current wall and restores the display preferences, but keeps this browser's
+      Windy API key. Custom camera URLs are included; only restore backups you trust, and keep them private if those
+      URLs contain access tokens.</p>
+    <div class="actions">
+      <button class="btn ghost" id="btn-clear-all" style="color:#fca5a5">Remove all cameras</button>
+    </div>
+
+    <hr>
+    <h3>Camera lists</h3>
+    <p class="hint" style="margin-top:0">Re-reads <code>cameras.json</code> (NZTA road cameras) and
+      <code>webcams.json</code> (local directory) from this website, so newly added cameras show up
+      without a rebuild.</p>
+    <div class="actions">
+      <button class="btn" id="btn-reload-list" title="Re-read cameras.json and webcams.json from this site">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"/><path d="M2.5 1.5v3h3"/></svg>
+        Reload camera list</button>
+    </div>
+
+    <p class="hint" style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px">
+      Webcam Wall — <b id="build-id">build …</b>
+    </p>
+
+    <div class="modal-actions">
+      <button class="btn primary" id="settings-close">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script id="baked-webcams" type="application/json">[{"i":"browns-bay-beach-reserve","t":"Browns Bay Beach Reserve","c":"Auckland","r":"Auckland","u":"https://images-webcams.windy.com/70/1604426870/current/full/1604426870.jpg","p":"https://online-australia.net/nz/ackl/auckland/browns-bay-beach-reserve/","w":"1604426870"},{"i":"grey-lynn-weather-cam","t":"Grey Lynn","c":"Auckland","r":"Auckland","u":"https://images-webcams.windy.com/28/1677234428/current/full/1677234428.jpg","p":"https://online-australia.net/nz/ackl/auckland/grey-lynn-weather-cam/","w":"1677234428"},{"i":"takapuna-beach","t":"Takapuna Bay","c":"Auckland","r":"Auckland","u":"https://images-webcams.windy.com/16/1644645216/current/full/1644645216.jpg","p":"https://online-australia.net/nz/ackl/auckland/takapuna-beach/","w":"1644645216"},{"i":"muriwai-beach","t":"Muriwai Beach","c":"Muriwai","r":"Auckland","u":"https://images-webcams.windy.com/78/1624925278/current/full/1624925278.jpg","p":"https://online-australia.net/nz/ackl/muriwai/muriwai-beach/","w":"1624925278"},{"i":"orewa-surf-cam","t":"Orewa Surf","c":"Orewa","r":"Auckland","u":"https://4winds.co.nz/webcam/orewa2.jpg","p":"https://online-australia.net/nz/ackl/orewa/orewa-surf-cam/","w":null},{"i":"bowentown-oceanside-dunes","t":"Bowentown Oceanside Dunes","c":"Bowentown","r":"Bay of Plenty","u":"https://images-webcams.windy.com/54/1653876454/current/full/1653876454.jpg","p":"https://online-australia.net/nz/bp/bowentown/bowentown-oceanside-dunes/","w":"1653876454"},{"i":"mount-maunganui-summit","t":"Mount Maunganui Summit","c":"Tauranga","r":"Bay of Plenty","u":"https://images-webcams.windy.com/25/1603651225/current/full/1603651225.jpg","p":"https://online-australia.net/nz/bp/tauranga/mount-maunganui-summit/","w":"1603651225"},{"i":"mt-maunganui-wharf","t":"View of Barges in Port","c":"Tauranga","r":"Bay of Plenty","u":"https://www.port-tauranga.co.nz/cameras/CutterChannel.jpg","p":"https://online-australia.net/nz/bp/tauranga/mt-maunganui-wharf/","w":null},{"i":"broken-river-ski-area","t":"Broken River Ski Area","c":"Birdwood","r":"Canterbury","u":"https://images-webcams.windy.com/01/1655701701/current/full/1655701701.jpg","p":"https://online-australia.net/nz/cntb/birdwood/broken-river-ski-area/","w":"1655701701"},{"i":"mount-pleasant-reserve","t":"Mount Pleasant Reserve","c":"Christchurch","r":"Canterbury","u":"https://images-webcams.windy.com/84/1669667884/current/full/1669667884.jpg","p":"https://online-australia.net/nz/cntb/christchurch/mount-pleasant-reserve/","w":"1669667884"},{"i":"taylors-mistake-beach","t":"Taylors Mistake Beach","c":"Christchurch","r":"Canterbury","u":"https://metdata.net.nz/lpc/camera/taylorsmistake1/image.php","p":"https://online-australia.net/nz/cntb/christchurch/taylors-mistake-beach/","w":null},{"i":"danseys-plain","t":"Danseys Plain","c":"Danseys Pass","r":"Canterbury","u":"https://public.aopa.nz/danseys.jpg","p":"https://online-australia.net/nz/cntb/danseys-pass/danseys-plain/","w":null},{"i":"waitaki-river","t":"Waitaki River","c":"Duntroon","r":"Canterbury","u":"https://images-webcams.windy.com/54/1662618954/current/full/1662618954.jpg","p":"https://online-australia.net/nz/cntb/duntroon/waitaki-river/","w":"1662618954"},{"i":"fairlie-hill","t":"Fairlie Hill","c":"Fairlie","r":"Canterbury","u":"https://images-webcams.windy.com/50/1402805050/current/full/1402805050.jpg","p":"https://online-australia.net/nz/cntb/fairlie/fairlie-hill/","w":"1402805050"},{"i":"geraldine-fairlie-highway","t":"Geraldine-Fairlie Highway","c":"Geraldine","r":"Canterbury","u":"https://images-webcams.windy.com/52/1656932252/current/full/1656932252.jpg","p":"https://online-australia.net/nz/cntb/geraldine/geraldine-fairlie-highway/","w":"1656932252"},{"i":"hunter-hills","t":"Hunter Hills","c":"Hunters Hills","r":"Canterbury","u":"https://images-webcams.windy.com/49/1391034349/current/full/1391034349.jpg","p":"https://online-australia.net/nz/cntb/hunters-hills/hunter-hills/","w":"1391034349"},{"i":"kaikoura-beach","t":"Kaikoura Beach","c":"Kaikoura","r":"Canterbury","u":"https://images-webcams.windy.com/85/1199551185/current/full/1199551185.jpg","p":"https://online-australia.net/nz/cntb/kaikoura/kaikoura-beach/","w":"1199551185"},{"i":"south-bay","t":"South Bay","c":"Kaikoura","r":"Canterbury","u":"https://webcam.ecan.govt.nz/public/camera/kaikoura/image?_ts=1725648414567","p":"https://online-australia.net/nz/cntb/kaikoura/south-bay/","w":null},{"i":"mount-hutt-ski-area","t":"Mount Hutt Ski Area","c":"Methven","r":"Canterbury","u":"https://images-webcams.windy.com/86/1593130886/current/full/1593130886.jpg","p":"https://online-australia.net/nz/cntb/methven/mount-hutt-ski-area/","w":"1593130886"},{"i":"mount-hutt-ski-resort","t":"Mount Hutt Ski Resort","c":"Methven","r":"Canterbury","u":"https://images-webcams.windy.com/60/1516133360/current/full/1516133360.jpg","p":"https://online-australia.net/nz/cntb/methven/mount-hutt-ski-resort/","w":"1516133360"},{"i":"lake-pukaki","t":"Lake Pukaki","c":"Pukaki","r":"Canterbury","u":"https://images-webcams.windy.com/68/1496397168/current/full/1496397168.jpg","p":"https://online-australia.net/nz/cntb/pukaki/lake-pukaki/","w":"1496397168"},{"i":"tuhawaiki-point","t":"Tuhawaiki Point","c":"Scarborough","r":"Canterbury","u":"https://images-webcams.windy.com/71/1564034571/current/full/1564034571.jpg","p":"https://online-australia.net/nz/cntb/scarborough/tuhawaiki-point/","w":"1564034571"},{"i":"kairakau-beach","t":"Kairakau Beach","c":"Kairakau","r":"Hawke's Bay","u":"https://images-webcams.windy.com/30/1667438830/current/full/1667438830.jpg","p":"https://online-australia.net/nz/hb/kairakau/kairakau-beach/","w":"1667438830"},{"i":"mangakuri-beach","t":"Mangakuri Beach","c":"Kairakau","r":"Hawke's Bay","u":"https://images-webcams.windy.com/89/1669100289/current/full/1669100289.jpg","p":"https://online-australia.net/nz/hb/kairakau/mangakuri-beach/","w":"1669100289"},{"i":"bay-skate","t":"Bay Skate","c":"Napier","r":"Hawke's Bay","u":"https://images-webcams.windy.com/93/1607998993/current/full/1607998993.jpg","p":"https://online-australia.net/nz/hb/napier/bay-skate/","w":"1607998993"},{"i":"napier-beach","t":"Napier Beach","c":"Napier","r":"Hawke's Bay","u":"https://images-webcams.windy.com/01/1298949101/current/full/1298949101.jpg","p":"https://online-australia.net/nz/hb/napier/napier-beach/","w":"1298949101"},{"i":"napier-city-panorama","t":"Napier City Panorama","c":"Napier","r":"Hawke's Bay","u":"https://images-webcams.windy.com/05/1607999505/current/full/1607999505.jpg","p":"https://online-australia.net/nz/hb/napier/napier-city-panorama/","w":"1607999505"},{"i":"perfume-point","t":"Perfume Point","c":"Napier","r":"Hawke's Bay","u":"https://images-webcams.windy.com/61/1607997961/current/full/1607997961.jpg","p":"https://online-australia.net/nz/hb/napier/perfume-point/","w":"1607997961"},{"i":"waipatiki-beach","t":"Waipatiki Beach","c":"Tangoio","r":"Hawke's Bay","u":"https://images-webcams.windy.com/06/1667438606/current/full/1667438606.jpg","p":"https://online-australia.net/nz/hb/tangoio/waipatiki-beach/","w":"1667438606"},{"i":"waitarere-beach","t":"Waitarere Beach","c":"Foxton","r":"Manawat\u016b-Whanganui","u":"https://www.remotecameras.co.nz/Webcams/WaitarereBeach.jpg","p":"https://online-australia.net/nz/mw/foxton/waitarere-beach/","w":null},{"i":"cape-turnagain","t":"Cape Turnagain","c":"Herbertville","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/65/1629249765/current/full/1629249765.jpg","p":"https://online-australia.net/nz/mw/herbertville/cape-turnagain/","w":"1629249765"},{"i":"zacharys-motel","t":"Zachary&#039;s Motel","c":"Levin","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/98/1621322798/current/full/1621322798.jpg","p":"https://online-australia.net/nz/mw/levin/zacharys-motel/","w":"1621322798"},{"i":"the-square-palmerston","t":"Sky","c":"Palmerston North","r":"Manawat\u016b-Whanganui","u":"https://palmyweather.co.nz/webcamanimation/north/0.jpg","p":"https://online-australia.net/nz/mw/palmerston-north/the-square-palmerston/","w":null},{"i":"wanganui-river","t":"Wanganui River","c":"Pipiriki","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/10/1664921110/current/full/1664921110.jpg","p":"https://online-australia.net/nz/mw/pipiriki/wanganui-river/","w":"1664921110"},{"i":"hinerua-hut","t":"Hinerua Hut","c":"Pongaroa","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/84/1707754184/current/full/1707754184.jpg","p":"https://online-australia.net/nz/mw/pongaroa/hinerua-hut/","w":"1707754184"},{"i":"the-tump-peak","t":"The Tump Peak","c":"Pongaroa","r":"Manawat\u016b-Whanganui","u":"https://camera.aonet.nz/cameras/tump.jpg","p":"https://online-australia.net/nz/mw/pongaroa/the-tump-peak/","w":null},{"i":"ngauruhoe-volcano","t":"Ngauruhoe Volcano","c":"Whakapapa Village","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/90/1359672190/current/full/1359672190.jpg","p":"https://online-australia.net/nz/mw/whakapapa-village/ngauruhoe-volcano/","w":"1359672190"},{"i":"ruapehu-volcano","t":"Ruapehu Volcano","c":"Whakapapa Village","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/45/1359671845/current/full/1359671845.jpg","p":"https://online-australia.net/nz/mw/whakapapa-village/ruapehu-volcano/","w":"1359671845"},{"i":"tongariro-volcano","t":"Tongariro Volcano","c":"Whakapapa Village","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/87/1359668687/current/full/1359668687.jpg","p":"https://online-australia.net/nz/mw/whakapapa-village/tongariro-volcano/","w":"1359668687"},{"i":"tukino-alpine-sports-club","t":"Tukino Alpine Sports Club","c":"Whakapapa Village","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/21/1649450521/current/full/1649450521.jpg","p":"https://online-australia.net/nz/mw/whakapapa-village/tukino-alpine-sports-club/","w":"1649450521"},{"i":"whanganui-river","t":"Whanganui River","c":"Whanganui","r":"Manawat\u016b-Whanganui","u":"https://images-webcams.windy.com/11/1578716011/current/full/1578716011.jpg","p":"https://online-australia.net/nz/mw/whanganui/whanganui-river/","w":"1578716011"},{"i":"rainbow-ski-area","t":"Rainbow Ski Area","c":"Rainbow","r":"Marlborough","u":"https://images-webcams.windy.com/42/1692181542/current/full/1692181542.jpg","p":"https://online-australia.net/nz/mrlbr/rainbow/rainbow-ski-area/","w":"1692181542"},{"i":"sunshine-bay","t":"Sunshine Bay","c":"Waikawa","r":"Marlborough","u":"https://images-webcams.windy.com/91/1675319191/current/full/1675319191.jpg","p":"https://online-australia.net/nz/mrlbr/waikawa/sunshine-bay/","w":"1675319191"},{"i":"tasman-bay","t":"Tasman Bay","c":"Nelson","r":"Nelson","u":"https://images-webcams.windy.com/59/1463346759/current/full/1463346759.jpg","p":"https://online-australia.net/nz/nls/nelson/tasman-bay/","w":"1463346759"},{"i":"botanic-garden","t":"Botanic Garden","c":"Dunedin","r":"Otago","u":"https://images-webcams.windy.com/77/1341857377/current/full/1341857377.jpg","p":"https://online-australia.net/nz/tg/danidin/botanic-garden/","w":"1341857377"},{"i":"dunedin-panorama","t":"Dunedin Panorama","c":"Dunedin","r":"Otago","u":"https://public.aopa.nz/mosgiel.jpg","p":"https://online-australia.net/nz/tg/danidin/dunedin-panorama/","w":null},{"i":"highgate-bridge","t":"Highgate Bridge","c":"Dunedin","r":"Otago","u":"https://images-webcams.windy.com/94/1341857694/current/full/1341857694.jpg","p":"https://online-australia.net/nz/tg/danidin/highgate-bridge/","w":"1341857694"},{"i":"hospital-heliport","t":"Hospital Heliport","c":"Dunedin","r":"Otago","u":"https://images-webcams.windy.com/50/1655336050/current/full/1655336050.jpg","p":"https://online-australia.net/nz/tg/danidin/hospital-heliport/","w":"1655336050"},{"i":"kaikorai-valley","t":"Kaikorai Valley Sky","c":"Dunedin","r":"Otago","u":"https://robertsfamily.org.nz/web3.jpg","p":"https://online-australia.net/nz/tg/danidin/kaikorai-valley/","w":null},{"i":"saddle-hill","t":"Saddle Hill Sky","c":"Dunedin","r":"Otago","u":"https://robertsfamily.org.nz/web1.jpg","p":"https://online-australia.net/nz/tg/danidin/saddle-hill/","w":null},{"i":"the-octagon","t":"The Octagon","c":"Dunedin","r":"Otago","u":"https://images-webcams.windy.com/23/1658899523/current/full/1658899523.jpg","p":"https://online-australia.net/nz/tg/danidin/the-octagon/","w":"1658899523"},{"i":"gertrude-valley-live","t":"Gertrude Valley","c":"Queenstown","r":"Otago","u":"https://www.queenstown.com/cams/gertrude-valley.jpg","p":"https://online-australia.net/nz/tg/queenstown/gertrude-valley-live/","w":null},{"i":"taieri-mouth-bar","t":"Taieri Mouth Bar","c":"Taieri Mouth","r":"Otago","u":"https://images-webcams.windy.com/00/1648970900/current/full/1648970900.jpg","p":"https://online-australia.net/nz/tg/taieri-mouth/taieri-mouth-bar/","w":"1648970900"},{"i":"arthurs-pass-national-park","t":"Arthur&#039;s Pass National Park Sky","c":"Arthur's Pass","r":"Southland","u":"https://www.arthurspass.com/webcams/webcam5.php","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/arthurs-pass-national-park/","w":null},{"i":"national-park-visitor-centre","t":"Arthur&#039;s Pass Park Visitor Centre","c":"Arthur's Pass","r":"Southland","u":"https://www.arthurspass.com/webcams/webcam3.php","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/national-park-visitor-centre/","w":null},{"i":"funiculars-embankments","t":"Craigieburn Valley Snow","c":"Arthur's Pass","r":"Southland","u":"https://www.mtcheeseman.co.nz/wp-content/webcam/ridge_t-bar.jpg","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/funiculars-embankments/","w":null},{"i":"mt-cheeseman-ski-area","t":"Mount Cheeseman","c":"Arthur's Pass","r":"Southland","u":"https://www.mtcheeseman.co.nz/wp-content/webcam/abasin.jpg","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/mt-cheeseman-ski-area/","w":null},{"i":"mt-cheeseman","t":"Mount Cheeseman Sky","c":"Arthur's Pass","r":"Southland","u":"https://www.mtcheeseman.co.nz/wp-content/webcam/base-learners.jpg","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/mt-cheeseman/","w":null},{"i":"view-of-temple-basin","t":"Temple Basin Ski Area","c":"Arthur's Pass","r":"Southland","u":"https://www.arthurspass.com/webcams/webcam7.php","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/view-of-temple-basin/","w":null},{"i":"funiculars-mountains","t":"Top of the Mountain Sky","c":"Arthur's Pass","r":"Southland","u":"https://www.mtcheeseman.co.nz/wp-content/webcam/aframe.jpg","p":"https://online-australia.net/nz/sthl/arthurs-pass-village/funiculars-mountains/","w":null},{"i":"bluff-panorama","t":"Bluff Panorama","c":"Invercargill","r":"Southland","u":"https://images-webcams.windy.com/91/1685076491/current/full/1685076491.jpg","p":"https://online-australia.net/nz/sthl/invercargill/bluff-panorama/","w":"1685076491"},{"i":"gertrude-valley-lookout","t":"Gertrude Valley Lookout","c":"Milford Sound","r":"Southland","u":"https://images-webcams.windy.com/86/1526850586/current/full/1526850586.jpg","p":"https://online-australia.net/nz/sthl/milford-sound/gertrude-valley-lookout/","w":"1526850586"},{"i":"mitre-peak","t":"Mitre Peak","c":"Milford Sound","r":"Southland","u":"https://www.southerndiscoveries.co.nz/sdlmlf.jpg","p":"https://online-australia.net/nz/sthl/milford-sound/mitre-peak/","w":null},{"i":"st-anne-point","t":"St Anne Point","c":"Milford Sound","r":"Southland","u":"https://metdata.net.nz/es/stanne/cam1/image.php","p":"https://online-australia.net/nz/sthl/milford-sound/st-anne-point/","w":null},{"i":"fiordland-national-park","t":"Fiordland National Park","c":"Te Anau","r":"Southland","u":"https://www.metdata.net.nz/doc/kepler/cam1/image.php","p":"https://online-australia.net/nz/sthl/te-anau/fiordland-national-park/","w":null},{"i":"the-summit-of-mount-taranaki","t":"The summit of Mount Taranaki","c":"Inglewood","r":"Taranaki","u":"https://inglewood.kiwi/snap.jpg","p":"https://online-australia.net/nz/trn/inglewood/the-summit-of-mount-taranaki/","w":null},{"i":"mount-taranaki-summit","t":"Mount Taranaki Summit","c":"Stratford","r":"Taranaki","u":"https://images-webcams.windy.com/33/1359669733/current/full/1359669733.jpg","p":"https://online-australia.net/nz/trn/stratford/mount-taranaki-summit/","w":"1359669733"},{"i":"pohara-beach","t":"Pohara Beach","c":"Pohara","r":"Tasman","u":"https://images-webcams.windy.com/88/1640721288/current/full/1640721288.jpg","p":"https://online-australia.net/nz/tsmn/pohara/pohara-beach/","w":"1640721288"},{"i":"whanganui-inlet","t":"Whanganui Inlet","c":"Rakopi","r":"Tasman","u":"https://images-webcams.windy.com/72/1421221472/current/full/1421221472.jpg","p":"https://online-australia.net/nz/tsmn/rakopi/whanganui-inlet/","w":"1421221472"},{"i":"meremere-drag-raceway","t":"Meremere Drag Raceway","c":"Pokeno","r":"Waikato","u":"https://images-webcams.windy.com/85/1520207985/current/full/1520207985.jpg","p":"https://online-australia.net/nz/waikato/pokeno/meremere-drag-raceway/","w":"1520207985"},{"i":"mount-ruapehu","t":"Mount Ruapehu","c":"Turangi","r":"Waikato","u":"https://images-webcams.windy.com/40/1625711740/current/full/1625711740.jpg","p":"https://online-australia.net/nz/waikato/turangi/mount-ruapehu/","w":"1625711740"},{"i":"whitianga-panorama","t":"Whitianga Panorama","c":"Whitianga","r":"Waikato","u":"https://images-webcams.windy.com/92/1647052092/current/full/1647052092.jpg","p":"https://online-australia.net/nz/waikato/whitianga/whitianga-panorama/","w":"1647052092"},{"i":"views-of-the-rocky-coast","t":"Wonderful views of the rocky coast","c":"Paekakariki","r":"Wellington","u":"https://images-webcams.windy.com/19/1475827919/current/full/1475827919.jpg","p":"https://online-australia.net/nz/wllng/paekakariki/views-of-the-rocky-coast/","w":"1475827919"},{"i":"kapiti-hill","t":"Kapiti Hill","c":"Paraparaumu","r":"Wellington","u":"https://images-webcams.windy.com/99/1592029599/current/full/1592029599.jpg","p":"https://online-australia.net/nz/wllng/paraparaumu/kapiti-hill/","w":"1592029599"},{"i":"kapiti-island","t":"Kapiti Island","c":"Paraparaumu","r":"Wellington","u":"http://waikanaeboatingclub.org.nz/images/beach.jpg","p":"https://online-australia.net/nz/wllng/paraparaumu/kapiti-island/","w":null},{"i":"remutaka-forest-park","t":"Remutaka Forest Park","c":"Upper Hutt","r":"Wellington","u":"https://images-webcams.windy.com/23/1533848823/current/full/1533848823.jpg","p":"https://online-australia.net/nz/wllng/upper-hutt/remutaka-forest-park/","w":"1533848823"},{"i":"lyall-bay","t":"Lyall Bay","c":"Wellington","r":"Wellington","u":"https://surf.co.nz/cams/airport/current.jpg","p":"https://online-australia.net/nz/wllng/wellington/lyall-bay/","w":null},{"i":"wellington-harbour-cam","t":"Wellington Harbour","c":"Wellington","r":"Wellington","u":"https://huttweather.co.nz/data/jpgwebcam.jpg","p":"https://online-australia.net/nz/wllng/wellington/wellington-harbour-cam/","w":null},{"i":"buller-river","t":"Buller River","c":"Westport","r":"West Coast","u":"https://public-data.bullerdc.govt.nz/snapshot/bar1.jpg","p":"https://online-australia.net/nz/west-coast/westport/buller-river/","w":null}]</script>
+
+<script id="baked-cameras" type="application/json">[{"i":"120","n":"SH1 Alfriston Rd Overbridge","d":"North along Sthn Mwy towards Alfriston Rd","r":"Auckland","h":"SH1","la":"-37.021","lo":"174.91","o":0,"m":0},{"i":"110","n":"SH1 Bairds Rd Overbridge","d":"North along Sthn Mwy from Bairds Rd","r":"Auckland","h":"SH1","la":"-36.957","lo":"174.861","o":0,"m":0},{"i":"610","n":"SH1 Bombay","d":"North along Sthn Mwy from Mill Rd","r":"Auckland","h":"SH1","la":"-37.192844","lo":"174.981959","o":0,"m":0},{"i":"821","n":"SH1 Constellation Dr","d":"South along Nthn Mwy from Constellation Dr","r":"Auckland","h":"SH1","la":"-36.750564","lo":"174.726254","o":0,"m":0},{"i":"598","n":"SH1 Dairy Flat","d":"South along Nthn Mwy from Dairy Flat Service Centre","r":"Auckland","h":"SH1","la":"-36.658354","lo":"174.666336","o":0,"m":0},{"i":"40","n":"SH1 Esmonde Rd","d":"South along Nthn Mwy from Esmonde Rd","r":"Auckland","h":"SH1","la":"-36.799","lo":"174.762","o":0,"m":0},{"i":"80","n":"SH1 Greenlane Interchange","d":"North along Sthn Mwy from Greenlane Interchange","r":"Auckland","h":"SH1","la":"-36.889","lo":"174.796","o":0,"m":0},{"i":"10","n":"SH1 Greville Rd","d":"South along Nthn Mwy from Greville Rd","r":"Auckland","h":"SH1","la":"-36.735","lo":"174.717","o":0,"m":0},{"i":"797","n":"SH1 Hill Road","d":"North along Sthn Mwy towards Manukau","r":"Auckland","h":"SH1","la":"-37.014391","lo":"174.907089","o":0,"m":0},{"i":"825","n":"SH1 Johnstones Hill Tunnels","d":"South along SH1 towards Tunnels","r":"Auckland","h":"SH1","la":"-36.530387","lo":"174.676896","o":0,"m":0},{"i":"225","n":"SH1 Market Rd","d":"South along Sthn Mwy towards Market Rd","r":"Auckland","h":"SH1","la":"-36.878","lo":"174.782","o":0,"m":0},{"i":"818","n":"SH1 McClymonts Rd Overbridge","d":"North along Nthn Mwy from McClymonts Rd","r":"Auckland","h":"SH1","la":"-36.724252","lo":"174.713939","o":0,"m":0},{"i":"651","n":"SH1 Millwater","d":"South along Nthn Mwy from Wainui Rd","r":"Auckland","h":"SH1","la":"-36.603273","lo":"174.661741","o":0,"m":0},{"i":"611","n":"SH1 Nikau Rd","d":"South along Waikato Exwy from Nikau Rd","r":"Auckland","h":"SH1","la":"-37.214557","lo":"175.0003","o":0,"m":0},{"i":"30","n":"SH1 Northcote Rd","d":"North along Nthn Mwy from Northcote Rd","r":"Auckland","h":"SH1","la":"-36.789","lo":"174.753","o":0,"m":0},{"i":"769","n":"SH1 Okura","d":"South along Nthn Mwy in Okura area","r":"Auckland","h":"SH1","la":"-36.669183","lo":"174.68074","o":0,"m":0},{"i":"50","n":"SH1 Onewa Rd","d":"South along Nthn Mwy from Onewa Rd","r":"Auckland","h":"SH1","la":"-36.812","lo":"174.754","o":0,"m":0},{"i":"799","n":"SH1 Orams Rd","d":"North along Sthn Mwy towards Orams Rd overbridge","r":"Auckland","h":"SH1","la":"-37.009684","lo":"174.903296","o":0,"m":0},{"i":"123","n":"SH1 Pahurehure Inlet","d":"South along Sthn Mwy from Pahurehure Inlet","r":"Auckland","h":"SH1","la":"-37.054026","lo":"174.919067","o":0,"m":0},{"i":"124","n":"SH1 Papakura","d":"South along Sthn Mwy towards Papakura","r":"Auckland","h":"SH1","la":"-37.061584","lo":"174.924471","o":0,"m":0},{"i":"125","n":"SH1 Park Estate Rd Overbridge","d":"South along Sthn Mwy from Park Estate Rd","r":"Auckland","h":"SH1","la":"-37.085","lo":"174.936","o":0,"m":0},{"i":"826","n":"SH1 Puhoi On-ramp","d":"South along Puhoi on-ramp to SH1","r":"Auckland","h":"SH1","la":"-36.5187","lo":"174.671","o":0,"m":0},{"i":"824","n":"SH1 Puhoi Viaduct","d":"North along SH1 towards Puhoi Viaduct","r":"Auckland","h":"SH1","la":"-36.51967","lo":"174.67121","o":0,"m":0},{"i":"827","n":"SH1 Pukerito Roundabout","d":"North along SH1 towards Pukerito Rbt","r":"Auckland","h":"SH1","la":"-36.389353","lo":"174.641729","o":0,"m":0},{"i":"613","n":"SH1 Ramarama","d":"North along Sthn Mwy from Ararimu Rd","r":"Auckland","h":"SH1","la":"-37.143496","lo":"174.969213","o":0,"m":0},{"i":"100","n":"SH1 Redoubt Rd","d":"North along Sthn Mwy from Redoubt Rd","r":"Auckland","h":"SH1","la":"-36.992","lo":"174.888","o":0,"m":0},{"i":"723","n":"SH1 Redvale","d":"South along Nthn Mwy in Redvale area","r":"Auckland","h":"SH1","la":"-36.685718","lo":"174.701202","o":0,"m":0},{"i":"820","n":"SH1 Rosedale","d":"South along Nthn Mwy in Rosedale area","r":"Auckland","h":"SH1","la":"-36.743377","lo":"174.720401","o":0,"m":0},{"i":"126","n":"SH1 Slippery Creek","d":"South along Sthn Mwy towards Drury Interchange","r":"Auckland","h":"SH1","la":"-37.094","lo":"174.944","o":0,"m":0},{"i":"90","n":"SH1 South Eastern Hwy","d":"South along Sthn Mwy towards South Eastern Hwy","r":"Auckland","h":"SH1","la":"-36.915","lo":"174.826","o":0,"m":0},{"i":"822","n":"SH1 Sunset Rd Overbridge","d":"South along Nthn Mwy from Sunset Rd","r":"Auckland","h":"SH1","la":"-36.753905","lo":"174.728353","o":0,"m":0},{"i":"121","n":"SH1 Takanini","d":"South along Sthn Mwy towards Takanini","r":"Auckland","h":"SH1","la":"-37.028848","lo":"174.910259","o":0,"m":0},{"i":"798","n":"SH1 Takanini Interchange","d":"North along Sthn Mwy and Takanini On-ramp","r":"Auckland","h":"SH1","la":"-37.03626","lo":"174.909648","o":0,"m":0},{"i":"819","n":"SH1 Tirohanga Whanui Bridge","d":"North along Nthn Mwy towards Tirohanga Whanui Bridge","r":"Auckland","h":"SH1","la":"-36.728623","lo":"174.7143","o":0,"m":0},{"i":"20","n":"SH1 Tristram Ave","d":"South along Nthn Mwy from Tristram Ave","r":"Auckland","h":"SH1","la":"-36.771763","lo":"174.742792","o":0,"m":0},{"i":"122","n":"SH1 Walter Strevens Dr Overbridge","d":"South along Sthn Mwy from Walter Strevens Dr","r":"Auckland","h":"SH1","la":"-37.044396","lo":"174.913045","o":0,"m":0},{"i":"60","n":"SH1/SH16 Central Mwy Junction","d":"South along Sthn Mwy at Nth Wstn Mwy link","r":"Auckland","h":"SH1","la":"-36.86","lo":"174.757","o":0,"m":0},{"i":"815","n":"SH1/SH18 Interchange","d":"West along SH18 towards Paul Matthews Rd","r":"Auckland","h":"SH18","la":"-36.750359","lo":"174.722521","o":0,"m":0},{"i":"612","n":"SH1/SH2 Interchange","d":"North along Waikato Exwy from SH2 Interchange","r":"Auckland","h":"SH1","la":"-37.230209","lo":"175.01569","o":0,"m":0},{"i":"214","n":"SH1/SH20 Interchange North","d":"North along Sthn Mwy at Sth Wstn Mwy link","r":"Auckland","h":"SH1","la":"-37.0","lo":"174.892","o":0,"m":0},{"i":"212","n":"SH1/SH20 Interchange South","d":"South along Sthn Mwy at Sth Wstn Mwy link","r":"Auckland","h":"SH1","la":"-36.997","lo":"174.891","o":0,"m":0},{"i":"130","n":"SH16 Bond St Overbridge","d":"West along Nth Wstn Mwy from Bond St","r":"Auckland","h":"SH16","la":"-36.869","lo":"174.746","o":0,"m":0},{"i":"654","n":"SH16 Carrington Rd Overbridge","d":"East along Nth Wstn Mwy from Carrington Rd","r":"Auckland","h":"SH16","la":"-36.87173","lo":"174.71018","o":0,"m":0},{"i":"688","n":"SH16 Causeway","d":"North along the Nth Wstn Mwy Causeway","r":"Auckland","h":"SH16","la":"-36.872107","lo":"174.689738","o":0,"m":0},{"i":"170","n":"SH16 Lincoln Rd North","d":"North along Nth Wstn Mwy from Lincoln Rd","r":"Auckland","h":"SH16","la":"-36.847","lo":"174.63","o":0,"m":0},{"i":"160","n":"SH16 Lincoln Rd South","d":"South along Nth Wstn Mwy from Lincoln Rd","r":"Auckland","h":"SH16","la":"-36.849","lo":"174.632","o":0,"m":0},{"i":"687","n":"SH16 Patiki Rd","d":"North along Nth Wstn Mwy from Patiki Rd","r":"Auckland","h":"SH16","la":"-36.865869","lo":"174.666243","o":0,"m":0},{"i":"697","n":"SH16 Rosebank Rd","d":"South along Nth Wstn Mwy from Rosebank Rd","r":"Auckland","h":"SH16","la":"-36.870049","lo":"174.673614","o":0,"m":0},{"i":"150","n":"SH16 Te Atatu Rd","d":"South along Nth Wstn Mwy from Te Atatu Rd","r":"Auckland","h":"SH16","la":"-36.858","lo":"174.653","o":0,"m":0},{"i":"689","n":"SH16 Whau River","d":"South along Nth Wstn Mwy towards Patiki Rd","r":"Auckland","h":"SH16","la":"-36.860564","lo":"174.6609","o":0,"m":0},{"i":"140","n":"SH16/20 Interchange East","d":"East along Nth Wstn Mwy from Gt North Rd","r":"Auckland","h":"SH16","la":"-36.872","lo":"174.706","o":0,"m":0},{"i":"686","n":"SH16/20 Interchange North","d":"North along the Nth Wstn Mwy Causeway","r":"Auckland","h":"SH16","la":"-36.871594","lo":"174.699344","o":0,"m":0},{"i":"655","n":"SH16/20 Interchange South","d":"South from Nth Wstn Mwy to Waterview Tunnel","r":"Auckland","h":"SH16","la":"-36.871997","lo":"174.704836","o":0,"m":0},{"i":"271","n":"SH16/SH18 Interchange North","d":"North along Nth Wstn Mwy towards Kumeu","r":"Auckland","h":"SH16","la":"-36.813","lo":"174.612","o":0,"m":0},{"i":"270","n":"SH16/SH18 Interchange South","d":"South along Nth Wstn Mwy from Hobsonville Rd","r":"Auckland","h":"SH16","la":"-36.819","lo":"174.614","o":0,"m":0},{"i":"172","n":"SH18 Albany Hwy","d":"East along Upper Hbr Mwy from Albany Hwy","r":"Auckland","h":"SH18","la":"-36.757","lo":"174.703","o":0,"m":0},{"i":"223","n":"SH18 Brigham Creek Interchange","d":"West along Brigham Creek Rd towards Whenuapai","r":"Auckland","h":"SH18","la":"-36.8","lo":"174.638","o":0,"m":0},{"i":"178","n":"SH18 Cuthill","d":"West along Upper Hbr Mwy from Cuthill","r":"Auckland","h":"SH18","la":"-36.763","lo":"174.7","o":0,"m":0},{"i":"175","n":"SH18 Greenhithe Rd","d":"East along Upper Hbr Mwy from Greenhithe Rd","r":"Auckland","h":"SH18","la":"-36.771","lo":"174.686","o":0,"m":0},{"i":"173","n":"SH18 Greenhithe West","d":"West along Upper Hbr Mwy towards Tauhinu Rd Overbridge","r":"Auckland","h":"SH18","la":"-36.778","lo":"174.681","o":0,"m":0},{"i":"224","n":"SH18 Hobsonville","d":"West along Upper Hbr Mwy towards Brigham Creek Rd","r":"Auckland","h":"SH18","la":"-36.796","lo":"174.645","o":0,"m":0},{"i":"174","n":"SH18 Paul Matthews Rd","d":"East along Upper Hbr Mwy towards Paul Matthews Rd","r":"Auckland","h":"SH18","la":"-36.753","lo":"174.714","o":0,"m":0},{"i":"176","n":"SH18 Schnapper Rock","d":"East along Upper Hbr Mwy from Schnapper Rock","r":"Auckland","h":"SH18","la":"-36.765","lo":"174.691","o":0,"m":0},{"i":"70","n":"SH18 Squadron Dr","d":"East along Upper Hbr Mwy from Squadron Dr","r":"Auckland","h":"SH18","la":"-36.791","lo":"174.655","o":0,"m":0},{"i":"171","n":"SH18 Tauhinu Rd Overbridge","d":"West along Upper Hbr Mwy from Tauhinu Rd","r":"Auckland","h":"SH18","la":"-36.782","lo":"174.678","o":0,"m":0},{"i":"221","n":"SH18 Trig Rd","d":"West along Upper Hbr Mwy from Trig Rd","r":"Auckland","h":"SH18","la":"-36.808","lo":"174.621","o":0,"m":0},{"i":"823","n":"SH18 Unsworth Heights","d":"East along Upper Hbr Mwy from Unsworth Heights","r":"Auckland","h":"SH18","la":"-36.753768","lo":"174.709771","o":0,"m":0},{"i":"177","n":"SH18 Upper Harbour Bridge","d":"East along Upper Hbr Mwy towards Upper Hbr Bridge","r":"Auckland","h":"SH18","la":"-36.786","lo":"174.662","o":0,"m":0},{"i":"222","n":"SH18 Waiahora Creek","d":"West along Upper Hbr Mwy towards Trig Rd","r":"Auckland","h":"SH18","la":"-36.805","lo":"174.628","o":0,"m":0},{"i":"619","n":"SH20 Bader Dr Overbridge","d":"North along Sth Wstn Mwy from Bader Dr Overbridge","r":"Auckland","h":"SH20","la":"-36.967669","lo":"174.806404","o":0,"m":0},{"i":"210","n":"SH20 Barrowcliffe Pl Overbridge","d":"North along Sth Wstn Mwy towards Wiri Station Rd","r":"Auckland","h":"SH20","la":"-36.996","lo":"174.881","o":0,"m":0},{"i":"207","n":"SH20 Cavendish Dr","d":"South along Sth Wstn Mwy from Cavendish Dr","r":"Auckland","h":"SH20","la":"-36.998","lo":"174.852","o":0,"m":0},{"i":"205","n":"SH20 Coronation Rd","d":"Ramps for Sth Wstn Mwy at Coronation Rd","r":"Auckland","h":"SH20","la":"-36.953","lo":"174.792","o":0,"m":0},{"i":"193","n":"SH20 Dominion Rd","d":"South along Sth Wstn Mwy from Dominion Rd","r":"Auckland","h":"SH20","la":"-36.911","lo":"174.74","o":0,"m":0},{"i":"201","n":"SH20 Gloucester Park Rd","d":"North along Sth Wstn Mwy from Gloucester Park Rd","r":"Auckland","h":"SH20","la":"-36.928","lo":"174.782","o":0,"m":0},{"i":"211","n":"SH20 Gt South Rd","d":"North along Sth Wstn Mwy from Gt South Rd","r":"Auckland","h":"SH20","la":"-36.996","lo":"174.886","o":0,"m":0},{"i":"204","n":"SH20 Hastie Ave Footbridge","d":"North along Sth Wstn Mwy from Hastie Ave Footbridge","r":"Auckland","h":"SH20","la":"-36.945","lo":"174.793","o":0,"m":0},{"i":"192","n":"SH20 Hayr Rd Overbridge","d":"South along Sth Wstn Mwy towards Hayr Rd Overbridge","r":"Auckland","h":"SH20","la":"-36.914","lo":"174.75","o":0,"m":0},{"i":"191","n":"SH20 Hillsborough Rd","d":"South along Sth Wstn Mwy from Hillsborough Rd","r":"Auckland","h":"SH20","la":"-36.917","lo":"174.759","o":0,"m":0},{"i":"209","n":"SH20 Lambie Dr","d":"South along Sth Wstn Mwy from Lambie Dr","r":"Auckland","h":"SH20","la":"-36.996","lo":"174.874","o":0,"m":0},{"i":"194","n":"SH20 Maioro St","d":"South along Sth Wstn Mwy from Maioro St","r":"Auckland","h":"SH20","la":"-36.904128","lo":"174.723118","o":0,"m":0},{"i":"290","n":"SH20 Massey Rd","d":"North along Sth Wstn Mwy from Massey Rd","r":"Auckland","h":"SH20","la":"-36.973","lo":"174.817","o":0,"m":0},{"i":"653","n":"SH20 May Rd Overbridge","d":"North along Sth Wstn Mwy from May Rd","r":"Auckland","h":"SH20","la":"-36.90943","lo":"174.73442","o":0,"m":0},{"i":"202","n":"SH20 Onehunga Wharf","d":"North along Sth Wstn Mwy from Onehunga Wharf","r":"Auckland","h":"SH20","la":"-36.931","lo":"174.786","o":0,"m":0},{"i":"667","n":"SH20 Owairaka","d":"South along Sth Wstn Mwy after Waterview Tunnel","r":"Auckland","h":"SH20","la":"-36.899797","lo":"174.713633","o":0,"m":0},{"i":"208","n":"SH20 Plunket Ave Overbridge","d":"North along Sth Wstn Mwy towards Roscommon Rd","r":"Auckland","h":"SH20","la":"-36.998","lo":"174.865","o":0,"m":0},{"i":"289","n":"SH20 Portage Rd North","d":"North along Sth Wstn Mwy towards Massey Rd","r":"Auckland","h":"SH20","la":"-36.98","lo":"174.827","o":0,"m":0},{"i":"288","n":"SH20 Portage Rd South","d":"North along Sth Wstn Mwy towards Portage Rd Overbridge","r":"Auckland","h":"SH20","la":"-36.984608","lo":"174.832329","o":0,"m":0},{"i":"206","n":"SH20 Puhinui Rd","d":"South along Sth Wstn Mwy & SH20B airport offramp","r":"Auckland","h":"SH20","la":"-36.993","lo":"174.843","o":0,"m":0},{"i":"190","n":"SH20 Queenstown Rd","d":"East along Queenstown Rd from Sth Wstn Mwy","r":"Auckland","h":"SH20","la":"-36.921434017433","lo":"174.767310105494","o":0,"m":0},{"i":"203","n":"SH20 Rimu Rd","d":"North along Sth Wstn Mwy from Rimu Rd","r":"Auckland","h":"SH20","la":"-36.941","lo":"174.79","o":0,"m":0},{"i":"668","n":"SH20 Te Whitinga Footbridge","d":"South along Sth Wstn Mwy towards Richardson Rd","r":"Auckland","h":"SH20","la":"-36.90074","lo":"174.71701","o":0,"m":0},{"i":"669","n":"SH20 Waterview","d":"South from Nth Wstn Mwy to the Waterview Tunnel","r":"Auckland","h":"SH20","la":"-36.87504","lo":"174.70381","o":0,"m":0},{"i":"306","n":"SH20/20A Interchange","d":"North along Sth Wstn Mwy & SH20A airport link","r":"Auckland","h":"SH20","la":"-36.964","lo":"174.8","o":0,"m":0},{"i":"307","n":"SH20A Bader Dr Overbridge","d":"North along SH20A towards Sth Wstn Mwy at Bader Dr","r":"Auckland","h":"SH20A","la":"-36.966298","lo":"174.796059","o":0,"m":0},{"i":"275","n":"SH20A George Bolt Mem Dr North","d":"North along SH20A from airport at Kirkbride Rd","r":"Auckland","h":"SH20A","la":"-36.973","lo":"174.789","o":0,"m":0},{"i":"274","n":"SH20A George Bolt Mem Dr South","d":"North along SH20A from airport at Montgomerie Rd","r":"Auckland","h":"SH20A","la":"-36.982","lo":"174.784","o":0,"m":0},{"i":"272","n":"SH20B Prices Rd","d":"East along SH20B Puhinui Rd towards Sth Wstn Mwy","r":"Auckland","h":"SH20B","la":"-36.996","lo":"174.835","o":0,"m":0},{"i":"605","n":"SH29 Eastern Summit","d":"West along SH29 Kaimai Ranges (Summit)","r":"Bay Of Plenty","h":"SH29","la":"-37.866012","lo":"175.942052","o":0,"m":0},{"i":"603","n":"SH29 Kaimai Eastern","d":"West along SH29 Kaimai Ranges","r":"Bay Of Plenty","h":"SH29","la":"-37.836873","lo":"175.977909","o":0,"m":0},{"i":"693","n":"Blenheim Rd / Wharenui Rd","d":"West along Blenheim Rd from Wharenui Rd","r":"Canterbury","h":"ART","la":"-43.538132","lo":"172.587343","o":1,"m":0},{"i":"682","n":"Lincoln Rd / Nairn St North","d":"North along Lincoln Rd from Nairn St","r":"Canterbury","h":"ART","la":"-43.548018","lo":"172.604038","o":1,"m":0},{"i":"681","n":"Lincoln Rd / Nairn St South","d":"South along Lincoln Rd from Nairn St","r":"Canterbury","h":"ART","la":"-43.548018","lo":"172.604038","o":1,"m":0},{"i":"287","n":"Marshland Rd / Lake Terrace Rd","d":"North along Marshland Rd from Lake Tce Rd","r":"Canterbury","h":"ART","la":"-43.495","lo":"172.661","o":1,"m":0},{"i":"296","n":"Marshland Rd / Prestons Rd North","d":"North along Marshland Rd from Prestons Rd","r":"Canterbury","h":"ART","la":"-43.474","lo":"172.659","o":1,"m":0},{"i":"297","n":"Marshland Rd / Prestons Rd South","d":"South along Marshland Rd from Prestons Rd","r":"Canterbury","h":"ART","la":"-43.474","lo":"172.66","o":1,"m":0},{"i":"310","n":"Rangiora North","d":"North along Ashley St from High St","r":"Canterbury","h":"ART","la":"-43.303137","lo":"172.596572","o":1,"m":0},{"i":"311","n":"Rangiora South","d":"South along Ivory St from High St","r":"Canterbury","h":"ART","la":"-43.303257","lo":"172.596695","o":1,"m":0},{"i":"601","n":"Redcliffs","d":"West along Main Rd from Augusta St","r":"Canterbury","h":"ART","la":"-43.562064","lo":"172.739184","o":1,"m":0},{"i":"618","n":"Riccarton Rd / Clyde Rd","d":"East along Riccarton Rd from Clyde Rd","r":"Canterbury","h":"ART","la":"-43.530728","lo":"172.586455","o":1,"m":0},{"i":"728","n":"SH1 Ashbury North","d":"South along Evans St from Newman St","r":"Canterbury","h":"SH1","la":"-44.381376","lo":"171.238707","o":0,"m":0},{"i":"729","n":"SH1 Ashbury South","d":"North along Evans St from Grasmere St","r":"Canterbury","h":"SH1","la":"-44.384087","lo":"171.238644","o":0,"m":0},{"i":"839","n":"SH1 at Sandhill Rd","d":"North along SH1 from Sandhill Rd","r":"Canterbury","h":"SH1","la":"-43.33922855813841","lo":"172.66686970006472","o":0,"m":0},{"i":"265","n":"SH1 Belfast North","d":"North along Main North Rd from Johns Rd","r":"Canterbury","h":"SH1J","la":"-43.451","lo":"172.629","o":0,"m":0},{"i":"266","n":"SH1 Belfast West","d":"West along Johns Rd from Main North Rd","r":"Canterbury","h":"SH1J","la":"-43.451118","lo":"172.628069","o":0,"m":0},{"i":"762","n":"SH1 Berketts Rd","d":"South along SH1 towards Weedons Ross Rd","r":"Canterbury","h":"","la":"-43.5747","lo":"172.427058","o":0,"m":0},{"i":"777","n":"SH1 Chaneys Rd Off-ramp","d":"South along SH1 from Chaneys Off-ramp towards Northern Corridor Off-ramp","r":"Canterbury","h":"","la":"-43.423207","lo":"172.649206","o":0,"m":0},{"i":"702","n":"SH1 Clearwater Ave","d":"North along Johns Rd at Clearwater Ave roundabout","r":"Canterbury","h":"SH1","la":"-43.457944","lo":"172.596773","o":0,"m":0},{"i":"838","n":"SH1 CNM at Kaiapoi Bridge","d":"North along Northern Motorway looking over Kaiapoi Bridge","r":"Canterbury","h":"SH1","la":"-43.37841650568279","lo":"172.64506130260898","o":0,"m":0},{"i":"292","n":"SH1 Dickeys Rd North","d":"North along Main North Rd from Dickeys Rd","r":"Canterbury","h":"ART","la":"-43.438","lo":"172.636","o":1,"m":0},{"i":"293","n":"SH1 Dickeys Rd South","d":"South along Main North Rd from Dickeys Rd","r":"Canterbury","h":"ART","la":"-43.438","lo":"172.638","o":1,"m":0},{"i":"703","n":"SH1 Gardiners Rd","d":"North along Johns Rd from Gardiners Rd","r":"Canterbury","h":"SH1","la":"-43.458966","lo":"172.590128","o":1,"m":0},{"i":"691","n":"SH1 Goulding Ave","d":"West along Main South Rd from Goulding Ave","r":"Canterbury","h":"SH1","la":"-43.543692","lo":"172.522902","o":0,"m":0},{"i":"694","n":"SH1 Halswell Junction Rd","d":"West along Main South Rd from Halswell Junction Rd","r":"Canterbury","h":"SH1","la":"-43.545891","lo":"172.507707","o":0,"m":0},{"i":"712","n":"SH1 Harewood Rd","d":"South along Russley Rd at Harewood Rd roundabout","r":"Canterbury","h":"SH1","la":"-43.478344","lo":"172.556434","o":1,"m":0},{"i":"260","n":"SH1 Main South Rd","d":"West along Main South Rd from Carmen Rd","r":"Canterbury","h":"SH1","la":"-43.54336","lo":"172.52569","o":0,"m":0},{"i":"684","n":"SH1 Memorial Ave","d":"West along Memorial Ave towards Christchurch Airport","r":"Canterbury","h":"SH1","la":"-43.493365","lo":"172.550462","o":0,"m":0},{"i":"685","n":"SH1 Memorial Ave East","d":"South along Russley Rd from Memorial Ave","r":"Canterbury","h":"SH1","la":"-43.493453","lo":"172.550199","o":0,"m":0},{"i":"709","n":"SH1 Memorial Ave North","d":"North along the Russley Overbridge","r":"Canterbury","h":"SH1","la":"-43.492518","lo":"172.550329","o":0,"m":0},{"i":"710","n":"SH1 Memorial Ave South","d":"South along the Russley Overbridge","r":"Canterbury","h":"SH1","la":"-43.492761","lo":"172.550215","o":1,"m":0},{"i":"683","n":"SH1 Memorial Ave West","d":"South along Russley Rd from Memorial Ave (Northbound traffic)","r":"Canterbury","h":"SH1","la":"-43.492364","lo":"172.549602","o":1,"m":0},{"i":"695","n":"SH1 Pound Rd North","d":"North along Main North Rd from Pound Rd","r":"Canterbury","h":"SH1","la":"-43.548874","lo":"172.491634","o":0,"m":0},{"i":"696","n":"SH1 Pound Rd South","d":"South along Main North Rd from Pound Rd","r":"Canterbury","h":"SH1","la":"-43.548975","lo":"172.491297","o":0,"m":0},{"i":"631","n":"SH1 Rakaia","d":"South along SH1 towards Rakaia from Rakaia Bridge","r":"Canterbury","h":"SH1","la":"-43.74988","lo":"172.03104","o":0,"m":0},{"i":"628","n":"SH1 Rakaia Bridge North","d":"South along Rakaia Bridge on SH1","r":"Canterbury","h":"SH1","la":"-43.73792","lo":"172.04519","o":0,"m":0},{"i":"629","n":"SH1 Rakaia Bridge South","d":"North along Rakaia Bridge on SH1","r":"Canterbury","h":"SH1","la":"-43.74967","lo":"172.03069","o":0,"m":0},{"i":"597","n":"SH1 Rolleston","d":"South along Main South Rd from Hoskyns Rd","r":"Canterbury","h":"SH1","la":"-43.587996","lo":"172.385782","o":0,"m":0},{"i":"711","n":"SH1 Syd Bradley Rd","d":"North along Russley Rd from Syd Bradley Rd","r":"Canterbury","h":"SH1","la":"-43.501626","lo":"172.545168","o":1,"m":0},{"i":"714","n":"SH1 Tinwald","d":"South along Hinds Highway from Lagmhor Rd","r":"Canterbury","h":"SH1","la":"-43.919632","lo":"171.721055","o":0,"m":0},{"i":"831","n":"SH1 Tinwald North","d":"North along Hinds Highway from Lagmhor Rd","r":"Canterbury","h":"SH1","la":"-43.919508","lo":"171.721221","o":1,"m":0},{"i":"754","n":"SH1 Tram Rd South","d":"South along Nthn Mwy from Tram Rd","r":"Canterbury","h":"SH1","la":"-43.40789795745612","lo":"172.6451928364974","o":0,"m":0},{"i":"755","n":"SH1 Tram Rd West","d":"West along Tram Rd over Nthn Mwy","r":"Canterbury","h":"SH1","la":"-43.408127","lo":"172.645199","o":0,"m":0},{"i":"268","n":"SH1 Waimakariri Bridge","d":"North over Waimakariri Bridge, Nthn Mwy","r":"Canterbury","h":"SH1","la":"-43.415","lo":"172.647","o":0,"m":0},{"i":"803","n":"SH1 Walnut Ave","d":"South along SH1 from Walnut Ave","r":"Canterbury","h":"SH1","la":"-43.898055","lo":"171.756387","o":0,"m":0},{"i":"291","n":"SH1 Waterloo Rd","d":"South along Carmen Rd from Waterloo Rd","r":"Canterbury","h":"SH1","la":"-43.538","lo":"172.528","o":0,"m":0},{"i":"705","n":"SH1 WBB Groynes Dr North","d":"North along Western Belfast Bypass from Groynes Dr overpass","r":"Canterbury","h":"SH1","la":"-43.449125","lo":"172.611821","o":0,"m":0},{"i":"706","n":"SH1 WBB Groynes Dr South","d":"South along Western Belfast Bypass to Groynes Dr overpass","r":"Canterbury","h":"SH1","la":"-43.449229","lo":"172.61162","o":0,"m":0},{"i":"767","n":"SH1 Weedons Rd Interchange","d":"South along SH1 from Weedons Rd Overbridge","r":"Canterbury","h":"","la":"-43.582268","lo":"172.409294","o":0,"m":0},{"i":"704","n":"SH1 Wilkinsons Rd","d":"North along Johns Rd from Wilkinsons Rd","r":"Canterbury","h":"SH1","la":"-43.464903","lo":"172.582345","o":1,"m":1},{"i":"641","n":"SH1/SH7 Waipara Junction","d":"West towards SH7 at SH1 Waipara Junction","r":"Canterbury","h":"SH1","la":"-43.06677","lo":"172.757568","o":0,"m":0},{"i":"701","n":"SH1/SH73 Russley East","d":"East along Yaldhurst Rd from Russley Rd","r":"Canterbury","h":"SH1","la":"-43.520493","lo":"172.534303","o":0,"m":0},{"i":"768","n":"SH1/SH76 Interchange","d":"North along SH1 towards SH76 interchange","r":"Canterbury","h":"","la":"-43.565623","lo":"172.447958","o":0,"m":0},{"i":"645","n":"SH73  Lunns Rd","d":"South along Curletts Rd from Lunns Rd","r":"Canterbury","h":"SH73","la":"-43.544327","lo":"172.572839","o":0,"m":0},{"i":"665","n":"SH73 Arthurs Pass","d":"South along SH73 in Arthurs Pass","r":"Canterbury","h":"SH73","la":"-42.936995","lo":"171.560586","o":0,"m":0},{"i":"644","n":"SH73 Avonhead Rd","d":"East along Yaldhurst Rd from Avonhead Rd","r":"Canterbury","h":"SH73","la":"-43.527555","lo":"172.558273","o":0,"m":0},{"i":"258","n":"SH73 Blenheim Rd","d":"South along Curletts Rd from Blenheim Rd","r":"Canterbury","h":"SH73","la":"-43.53931","lo":"172.56838","o":0,"m":0},{"i":"596","n":"SH73 Curletts Rd","d":"North along Curletts Rd from Vicki St","r":"Canterbury","h":"SH73","la":"-43.535802","lo":"172.567811","o":0,"m":0},{"i":"817","n":"SH73 West Melton East","d":"East along West Coast Rd at Weedons Ross Junction","r":"Canterbury","h":"SH73","la":"-43.52407","lo":"172.369776","o":0,"m":0},{"i":"816","n":"SH73 West Melton West","d":"West along West Coast Rd at Weedons Ross Junction","r":"Canterbury","h":"SH73","la":"-43.52397","lo":"172.369896","o":0,"m":0},{"i":"261","n":"SH73 Yaldhurst Rd","d":"West along Yaldhurst Rd from Curletts Rd","r":"Canterbury","h":"SH73","la":"-43.53074","lo":"172.56812","o":0,"m":0},{"i":"283","n":"SH73/SH76 Interchange","d":"East along Sthn Mwy at Curletts Rd Interchange","r":"Canterbury","h":"SH73","la":"-43.54808","lo":"172.57778","o":1,"m":0},{"i":"676","n":"SH74 Bridge St Roundabout","d":"South along Dyers Rd from Bridge St roundabout","r":"Canterbury","h":"SH74","la":"-43.5253","lo":"172.720372","o":1,"m":0},{"i":"779","n":"SH74 Factory Rd","d":"South along SH74 towards Belfast Rd Overbridge","r":"Canterbury","h":"","la":"-43.447802","lo":"172.646467","o":0,"m":0},{"i":"671","n":"SH74 Innes Rd Roundabout","d":"North along Queen Elizabeth II Dr from Innes Rd roundabout","r":"Canterbury","h":"SH74","la":"-43.490023","lo":"172.654695","o":1,"m":0},{"i":"267","n":"SH74 Linwood Ave","d":"South along Dyers Rd from Linwood Ave","r":"Canterbury","h":"SH74","la":"-43.546425","lo":"172.695535","o":0,"m":0},{"i":"674","n":"SH74 Metro Pl","d":"South along Dyers Rd from Metro Pl","r":"Canterbury","h":"SH74","la":"-43.5353","lo":"172.706061","o":0,"m":0},{"i":"672","n":"SH74 New Brighton Rd Roundabout","d":"South along ANZAC Dr from New Brighton Rd","r":"Canterbury","h":"SH74","la":"-43.500042","lo":"172.700719","o":0,"m":0},{"i":"256","n":"SH74 Pages Rd","d":"South along ANZAC Dr from Pages Rd","r":"Canterbury","h":"SH74","la":"-43.51132","lo":"172.71618","o":0,"m":0},{"i":"781","n":"SH74 Prestons Rd","d":"South along SH74 towards Queen Elizabeth II Dr roundabout","r":"Canterbury","h":"","la":"-43.47498","lo":"172.630646","o":0,"m":0},{"i":"783","n":"SH74 QEII Dr Roundabout North","d":"South along SH74 Queen Elizabeth II Dr southbound off-ramp","r":"Canterbury","h":"","la":"-43.485345","lo":"172.630821","o":0,"m":0},{"i":"782","n":"SH74 QEII Dr Roundabout South","d":"South along SH74 Queen Elizabeth II Dr northbound off-ramp","r":"Canterbury","h":"","la":"-43.486765","lo":"172.62878","o":0,"m":0},{"i":"263","n":"SH74 Queen Elizabeth II Dr","d":"North along Main North Rd from Queen Elizabeth II Dr","r":"Canterbury","h":"SH74M","la":"-43.48457","lo":"172.61631","o":1,"m":0},{"i":"780","n":"SH74 Radcliffe Rd","d":"South along SH74 towards Styx River Bridge","r":"Canterbury","h":"","la":"-43.467919","lo":"172.631653","o":0,"m":0},{"i":"778","n":"SH74 Railway Bridge","d":"South along SH74 towards Belfast Rd","r":"Canterbury","h":"","la":"-43.439177","lo":"172.647344","o":0,"m":0},{"i":"304","n":"SH74 Styx Mill Bridge North","d":"North along Main North Rd from Styx Mill Bridge","r":"Canterbury","h":"SH74M","la":"-43.468","lo":"172.617","o":1,"m":0},{"i":"305","n":"SH74 Styx Mill Bridge South","d":"South along Main North Rd from Styx Mill Bridge","r":"Canterbury","h":"SH74M","la":"-43.468176","lo":"172.619","o":1,"m":0},{"i":"673","n":"SH74 Travis Rd Roundabout","d":"North along Travis Rd from Frosts Rd","r":"Canterbury","h":"SH74","la":"-43.493159","lo":"172.701538","o":0,"m":0},{"i":"624","n":"SH74 Tunnel Rd","d":"South along Tunnel Rd from Ferry Rd","r":"Canterbury","h":"SH74","la":"-43.55417","lo":"172.69105","o":0,"m":0},{"i":"301","n":"SH74A Ferry Rd","d":"East along Ferry Rd from Rutherford St","r":"Canterbury","h":"SH74A","la":"-43.551595","lo":"172.686952","o":0,"m":0},{"i":"675","n":"SH74A Rutherford St","d":"West along Garlands Rd from Rutherford St","r":"Canterbury","h":"SH74A","la":"-43.556704","lo":"172.681932","o":0,"m":0},{"i":"726","n":"SH75 Augustine Dr North","d":"SH75","r":"Canterbury","h":"SH75","la":"-43.562436","lo":"172.579745","o":0,"m":0},{"i":"727","n":"SH75 Augustine Dr South","d":"SH75","r":"Canterbury","h":"SH75","la":"-43.562605","lo":"172.579515","o":0,"m":0},{"i":"678","n":"SH75 Nicholls Rd","d":"North along Halswell Rd from Nicholls Rd","r":"Canterbury","h":"SH75","la":"-43.579301","lo":"172.566663","o":1,"m":0},{"i":"294","n":"SH75 Sparks Rd","d":"North along Halswell Rd from Sparks Rd","r":"Canterbury","h":"SH75","la":"-43.585527","lo":"172.570879","o":0,"m":0},{"i":"834","n":"SH76 Aidanfield Dr","d":"East along Sthn Mwy from Aidanfield Dr Overbridge","r":"Canterbury","h":"SH76","la":"-43.559458","lo":"172.564956","o":0,"m":0},{"i":"295","n":"SH76 Antigua St","d":"East along Brougham St from Antigua St","r":"Canterbury","h":"SH76","la":"-43.547486","lo":"172.627955","o":0,"m":0},{"i":"614","n":"SH76 Awatea Rd","d":"West along Sthn Mwy from Awatea Rd Overbridge","r":"Canterbury","h":"SH76","la":"-43.564445","lo":"172.553731","o":1,"m":0},{"i":"309","n":"SH76 Barrington St","d":"North along Barrington St from Sthn Mwy","r":"Canterbury","h":"SH76","la":"-43.547834","lo":"172.609956","o":0,"m":0},{"i":"765","n":"SH76 Blakes Rd","d":"East along Sthn Mwy towards Shands Rd Overbridge","r":"Canterbury","h":"","la":"-43.562425","lo":"172.490691","o":0,"m":0},{"i":"625","n":"SH76 Burlington St","d":"South along Burlington St from Brougham St","r":"Canterbury","h":"SH76","la":"-43.54731","lo":"172.64277","o":0,"m":0},{"i":"259","n":"SH76 Colombo St","d":"West along Brougham St from Colombo St","r":"Canterbury","h":"SH76","la":"-43.547498","lo":"172.636663","o":1,"m":0},{"i":"690","n":"SH76 Durham St South","d":"East along Brougham St from Durham St Sth","r":"Canterbury","h":"SH76","la":"-43.547588","lo":"172.633567","o":1,"m":0},{"i":"286","n":"SH76 Ensors Rd","d":"North along Ensors Rd from Brougham St","r":"Canterbury","h":"SH76","la":"-43.549","lo":"172.66","o":1,"m":0},{"i":"300","n":"SH76 Garlands Rd","d":"West along Brougham St from Garlands Rd","r":"Canterbury","h":"SH76","la":"-43.555568","lo":"172.67043","o":0,"m":0},{"i":"759","n":"SH76 Halswell Junction Rd","d":"East along Sthn Mwy from Halswell Junction Rd Overbridge","r":"Canterbury","h":"","la":"-43.564249","lo":"172.534649","o":0,"m":0},{"i":"698","n":"SH76 Lincoln Rd East","d":"East along Sthn Mwy from Lincoln Rd","r":"Canterbury","h":"SH76","la":"-43.547979","lo":"172.604354","o":1,"m":0},{"i":"699","n":"SH76 Lincoln Rd West","d":"West along Sthn Mwy from Lincoln Rd","r":"Canterbury","h":"SH76","la":"-43.547953","lo":"172.604097","o":1,"m":0},{"i":"763","n":"SH76 Marshs Rd","d":"East along Sthn Mwy towards Springs Rd Overbridge","r":"Canterbury","h":"","la":"-43.565319","lo":"172.518967","o":0,"m":0},{"i":"303","n":"SH76 Selwyn St","d":"East along Brougham St from Selwyn St","r":"Canterbury","h":"SH76","la":"-43.547289","lo":"172.621704","o":0,"m":0},{"i":"760","n":"SH76 Springs Rd","d":"East along Sthn Mwy across Springs Rd Overbridge","r":"Canterbury","h":"SH1","la":"-43.564229","lo":"172.526089","o":0,"m":0},{"i":"756","n":"SH76 Springs Rd East","d":"East across Springs Rd roundabout","r":"Canterbury","h":"SH76H","la":"-43.561593","lo":"172.528445","o":1,"m":0},{"i":"757","n":"SH76 Springs Rd South","d":"South along Springs Rd from Springs Rd roundabout","r":"Canterbury","h":"SH76H","la":"-43.561735","lo":"172.528362","o":1,"m":0},{"i":"758","n":"SH76 Springs Rd West","d":"West along Halswell Juction Rd from Springs Rd roundabout","r":"Canterbury","h":"SH76H","la":"-43.561461","lo":"172.528378","o":1,"m":0},{"i":"764","n":"SH76 Trents Rd","d":"East along Sthn Mwy towards Shands Rd Overbridge","r":"Canterbury","h":"","la":"-43.563769","lo":"172.481386","o":1,"m":0},{"i":"302","n":"SH76 Waltham Rd","d":"North along Waltham Rd from Brougham St","r":"Canterbury","h":"SH76","la":"-43.547544","lo":"172.646563","o":0,"m":0},{"i":"766","n":"SH76 Waterholes Rd","d":"East along Sthn Mwy towards Trents Rd Overbridge","r":"Canterbury","h":"","la":"-43.567772","lo":"172.464054","o":1,"m":0},{"i":"679","n":"SH76 Wrights Rd East","d":"East along Sthn Mwy from Wrights Rd","r":"Canterbury","h":"SH76","la":"-43.547106","lo":"172.597799","o":0,"m":0},{"i":"680","n":"SH76 Wrights Rd West","d":"West along Sthn Mwy from Wrights Rd","r":"Canterbury","h":"SH76","la":"-43.547106","lo":"172.597799","o":0,"m":0},{"i":"840","n":"SH77 Rakaia Gorge","d":"West across both Rakaia Gorge Bridges","r":"Canterbury","h":"","la":"-43.518198","lo":"171.659349","o":0,"m":0},{"i":"734","n":"SH79 Orari Bridge","d":"West along Upper Orari Bridge","r":"Canterbury","h":"SH79","la":"-44.043811","lo":"171.270721","o":0,"m":0},{"i":"733","n":"SH79 Orari East","d":"East along SH79 to Route 72 Junction","r":"Canterbury","h":"SH79","la":"-44.043279","lo":"171.271456","o":0,"m":0},{"i":"735","n":"SH8 Burkes Pass","d":"East along SH8 towards Burkes Pass township","r":"Canterbury","h":"SH8","la":"-44.089907","lo":"170.601734","o":0,"m":0},{"i":"731","n":"SH80 Aoraki Mt Cook Hwy","d":"North along SH80 from SH80/SH8 Pukaki Junction","r":"Canterbury","h":"SH88","la":"-44.187562","lo":"170.12378","o":0,"m":0},{"i":"730","n":"SH80 Pukaki Junction","d":"South along SH80 towards SH80/SH8 Pukaki Junction","r":"Canterbury","h":"SH80","la":"-44.187724","lo":"170.124617","o":0,"m":0},{"i":"600","n":"Sockburn Roundabout East","d":"East towards Main South Rd and Blenheim Rd from Sockburn Roundabout","r":"Canterbury","h":"ART","la":"-43.539324","lo":"172.553568","o":1,"m":0},{"i":"599","n":"Sockburn Roundabout West","d":"West along Main South Rd from Sockburn Roundabout","r":"Canterbury","h":"ART","la":"-43.539327","lo":"172.553415","o":1,"m":0},{"i":"617","n":"Southbrook North","d":"North along Southbrook Rd from Southbrook Retail Centre","r":"Canterbury","h":"SH71","la":"-43.32437","lo":"172.59879","o":1,"m":0},{"i":"602","n":"Southbrook South","d":"South along Southbrook Rd from Southbrook Retail Centre","r":"Canterbury","h":"SH71","la":"-43.324434","lo":"172.598367","o":1,"m":0},{"i":"713","n":"Williams St / Kaiapoi Bridge","d":"South along Williams St from Kaiapoi Bridge","r":"Canterbury","h":"ART","la":"-43.3827","lo":"172.657059","o":1,"m":0},{"i":"741","n":"SH2 Meeanee Rd Interchange","d":"North along SH2 at Meeanee Rd interchange","r":"Hawkes Bay","h":"SH2","la":"-39.53946","lo":"176.86055","o":1,"m":0},{"i":"740","n":"SH2 Watchman Rd Roundabout","d":"North along SH2 from Watchman Rd roundabout","r":"Hawkes Bay","h":"SH2","la":"-39.474114","lo":"176.877272","o":0,"m":0},{"i":"742","n":"SH2/SH50 Prebensen Dr Roundabout","d":"East along SH50 (towards City Centre) from Prebensen Dr roundabout","r":"Hawkes Bay","h":"SH2","la":"-39.496227","lo":"176.873477","o":1,"m":0},{"i":"739","n":"SH2/SH50/SH51 Taradale Rd Roundabout","d":"North along SH2/SH50 across Taradale Rd roundabout","r":"Hawkes Bay","h":"SH2","la":"-39.511299","lo":"176.876677","o":1,"m":0},{"i":"639","n":"SH1 South of Waiouru","d":"South along SH1 at Peter's Hill","r":"Manawatu-Whanganui","h":"SH1","la":"-39.530931","lo":"175.68276","o":0,"m":0},{"i":"234","n":"SH1 Waiouru","d":"North along SH1 towards Waiouru","r":"Manawatu-Whanganui","h":"SH1","la":"-39.488","lo":"175.67","o":0,"m":0},{"i":"658","n":"SH1 Blenheim North","d":"North along SH1 towards Picton at SH6 roundabout","r":"Nelson/Marlborough","h":"SH1","la":"-41.508696","lo":"173.959086","o":0,"m":0},{"i":"657","n":"SH1 Picton North","d":"North towards Picton","r":"Nelson/Marlborough","h":"SH1","la":"-41.301216","lo":"173.996527","o":0,"m":0},{"i":"646","n":"SH1 Spring Creek","d":"South along SH1 towards junction with SH62","r":"Nelson/Marlborough","h":"SH1","la":"-41.458547","lo":"173.963118","o":0,"m":0},{"i":"650","n":"SH6 Blenheim","d":"East along SH6 by Springlands Shopping Centre","r":"Nelson/Marlborough","h":"SH6","la":"-41.509186","lo":"173.935201","o":0,"m":0},{"i":"648","n":"SH6 Murchison","d":"East along SH6 in Murchison","r":"Nelson/Marlborough","h":"SH6","la":"-41.800115","lo":"172.322831","o":0,"m":0},{"i":"647","n":"SH63 St Arnaud","d":"East along SH63 in St Arnaud","r":"Nelson/Marlborough","h":"SH63","la":"-41.801028","lo":"172.849793","o":1,"m":0},{"i":"749","n":"SH1 Albany St North","d":"North along Great King St from Albany St","r":"Otago","h":"SH1","la":"-45.866536","lo":"170.50947","o":0,"m":0},{"i":"746","n":"SH1 Albany St South","d":"South along Gowland St from Albany St","r":"Otago","h":"SH1","la":"-45.866842","lo":"170.510978","o":0,"m":0},{"i":"750","n":"SH1 Burlington St","d":"South along Queens Gardens from Burlington St","r":"Otago","h":"SH1","la":"-45.877053","lo":"170.504596","o":0,"m":0},{"i":"254","n":"SH1 Caversham Mwy","d":"West along Caversham Mwy from Andersons Bay Rd","r":"Otago","h":"SH1","la":"-45.88869","lo":"170.49952","o":0,"m":0},{"i":"253","n":"SH1 Dunedin","d":"North along SH1 Andersons Bay Rd","r":"Otago","h":"SH1","la":"-45.888","lo":"170.5","o":0,"m":0},{"i":"255","n":"SH1 Dunedin Southern Mwy","d":"East along Dunedin Sthn Mwy from Mornington Rd","r":"Otago","h":"SH1","la":"-45.896579","lo":"170.462609","o":0,"m":0},{"i":"748","n":"SH1 Queens Gardens","d":"North along Queens Gardens","r":"Otago","h":"SH1","la":"-45.878315","lo":"170.504628","o":0,"m":0},{"i":"747","n":"SH1 St Andrew St","d":"North along Cumberland St from St Andrew St","r":"Otago","h":"SH1","la":"-45.87245","lo":"170.507747","o":0,"m":0},{"i":"623","n":"SH6 Frankton","d":"South along SH6 over Kawarau River Bridge","r":"Otago","h":"SH6","la":"-45.02751","lo":"168.734043","o":0,"m":0},{"i":"627","n":"SH6/SH6A Frankton Roundabout","d":"South along SH6 Kawarau Rd from SH6A Frankton Roundabout","r":"Otago","h":"SH6","la":"-45.01584","lo":"168.731767","o":0,"m":0},{"i":"622","n":"SH6A Queenstown Nth","d":"East along Stanley St from Shotover St","r":"Otago","h":"SH6A","la":"-45.030105","lo":"168.661541","o":0,"m":0},{"i":"621","n":"SH6A Queenstown Sth","d":"East along Stanley St from Ballarat St","r":"Otago","h":"SH6A","la":"-45.031031","lo":"168.662605","o":0,"m":0},{"i":"725","n":"SH8 Lindis Pass","d":"South along SH8 towards Lindis Pass Summit Lookout","r":"Otago","h":"SH8","la":"-44.58633","lo":"169.646311","o":0,"m":0},{"i":"752","n":"Kaimai Lookout Eastbound","d":"SH29 Kaimai Lookout Eastbound","r":"Waikato","h":"SH29","la":"-37.879389","lo":"175.927361","o":0,"m":0},{"i":"753","n":"Kaimai Lookout Westbound","d":"SH29 Kaimai Lookout Westbound","r":"Waikato","h":"SH29","la":"-37.879389","lo":"175.927361","o":0,"m":0},{"i":"751","n":"Kaimai Summit","d":"SH29 Kaimai Summit","r":"Waikato","h":"SH29","la":"-37.87017398","lo":"175.9336401","o":0,"m":0},{"i":"235","n":"SH1 Cobham Dr Roundabout","d":"North along SH1 Cambridge Rd","r":"Waikato","h":"SH1","la":"-37.800758","lo":"175.319009","o":1,"m":0},{"i":"239","n":"SH1 Cobham Dr Roundabout","d":"West along SH1 Cobham Dr","r":"Waikato","h":"SH1","la":"-37.800974","lo":"175.318981","o":1,"m":0},{"i":"240","n":"SH1 Cobham Dr Roundabout","d":"East along SH1 Cambridge Rd","r":"Waikato","h":"SH1","la":"-37.800828","lo":"175.319329","o":1,"m":0},{"i":"608","n":"SH1 Desert Rd","d":"North along SH1 Desert Rd at Summit","r":"Waikato","h":"SH1","la":"-39.294802","lo":"175.741135","o":0,"m":0},{"i":"638","n":"SH1 Waihohonu Bridge","d":"North along SH1 Desert Road at Waihohonu Bridge","r":"Waikato","h":"SH1","la":"-39.217695","lo":"175.735945","o":0,"m":0},{"i":"245","n":"SH1/SH23 Massey St Intersection","d":"North along SH1 Lincoln St","r":"Waikato","h":"SH1","la":"-37.788923","lo":"175.259582","o":1,"m":0},{"i":"246","n":"SH1/SH23 Massey St Intersection","d":"West along SH23 Massey St","r":"Waikato","h":"SH1","la":"-37.789","lo":"175.259","o":1,"m":0},{"i":"247","n":"SH1/SH23 Massey St Intersection","d":"South along SH1 Greenwood St","r":"Waikato","h":"SH1","la":"-37.789285","lo":"175.259745","o":1,"m":0},{"i":"248","n":"SH1/SH23 Massey St Intersection","d":"East over Hall St Overbridge","r":"Waikato","h":"SH1","la":"-37.788938","lo":"175.260011","o":1,"m":0},{"i":"236","n":"SH1/SH26 Hillcrest Roundabout","d":"South along SH1 Cambridge Rd","r":"Waikato","h":"SH1","la":"-37.801197","lo":"175.322985","o":1,"m":0},{"i":"238","n":"SH1/SH26 Hillcrest Roundabout","d":"West along SH1 Cambridge Rd","r":"Waikato","h":"SH1","la":"-37.801002","lo":"175.322447","o":1,"m":0},{"i":"237","n":"SH1/SH26 Hillcrest Roundabout","d":"East along SH26 Morrinsville Rd","r":"Waikato","h":"SH1","la":"-37.800933","lo":"175.322773","o":1,"m":0},{"i":"241","n":"SH1/SH3 Ohaupo Rd Intersection","d":"North along Ohaupo Rd","r":"Waikato","h":"SH1","la":"-37.808001","lo":"175.280243","o":1,"m":0},{"i":"242","n":"SH1/SH3 Ohaupo Rd Intersection","d":"East along SH1 Lorne St","r":"Waikato","h":"SH1","la":"-37.808221","lo":"175.280014","o":1,"m":0},{"i":"243","n":"SH1/SH3 Ohaupo Rd Intersection","d":"South along SH3 Ohaupo Rd","r":"Waikato","h":"SH1","la":"-37.80829","lo":"175.280354","o":1,"m":0},{"i":"244","n":"SH1/SH3 Ohaupo Rd Intersection","d":"West along SH1 Kahikatea Dr","r":"Waikato","h":"SH1","la":"-37.808111","lo":"175.28051","o":1,"m":0},{"i":"604","n":"SH29 Kaimai Western","d":"East along SH29 Kaimai Ranges","r":"Waikato","h":"SH29","la":"-37.882206","lo":"175.905293","o":0,"m":0},{"i":"606","n":"SH29 Western Summit","d":"East along SH29 Kaimai Ranges (Summit)","r":"Waikato","h":"SH29","la":"-37.87864","lo":"175.926655","o":0,"m":0},{"i":"249","n":"Te Rapa Rd/Wairere Dr Intersection","d":"North along Te Rapa Rd","r":"Waikato","h":"ART","la":"-37.749758","lo":"175.236791","o":1,"m":0},{"i":"250","n":"Te Rapa Rd/Wairere Dr Intersection","d":"West along Wairere Dr","r":"Waikato","h":"ART","la":"-37.750182","lo":"175.236555","o":1,"m":0},{"i":"251","n":"Te Rapa Rd/Wairere Dr Intersection","d":"South along Te Rapa Rd","r":"Waikato","h":"ART","la":"-37.750212","lo":"175.237207","o":1,"m":0},{"i":"252","n":"Te Rapa Rd/Wairere Dr Intersection","d":"East along Wairere Dr","r":"Waikato","h":"ART","la":"-37.749885","lo":"175.237228","o":1,"m":0},{"i":"812","n":"Otaki Main Highway","d":"Looking south, north of the Mill Road/Main Highway roundabout.","r":"Wellington","h":"Old SH1","la":"-40.75959","lo":"175.15858","o":0,"m":0},{"i":"796","n":"SH1 Churton Park North","d":"North along SH1 from Churton Park Interchange","r":"Wellington","h":"SH1","la":"-41.204499","lo":"174.821357","o":0,"m":0},{"i":"795","n":"SH1 Churton Park South","d":"South along SH1 from Churton Park Interchange","r":"Wellington","h":"SH1","la":"-41.205749","lo":"174.818448","o":0,"m":0},{"i":"828","n":"SH1 Clifton Terrace","d":"South view from north of Terrace Tunnel SH1","r":"Wellington","h":"SH1","la":"-41.283374","lo":"174.773778","o":0,"m":0},{"i":"811","n":"SH1 County Rd","d":"North from County Road.","r":"Wellington","h":"SH1","la":"-40.75829","lo":"175.16166","o":0,"m":0},{"i":"805","n":"SH1 Gear Rd Emergency Access","d":"South adjacent to the bend of Gear Road.","r":"Wellington","h":"Sh1","la":"-40.80976","lo":"175.11629","o":0,"m":0},{"i":"806","n":"SH1 Jim Winiata Way","d":"South towards the School Road Overbirdge.","r":"Wellington","h":"SH1","la":"-40.78968","lo":"175.13189","o":0,"m":0},{"i":"226","n":"SH1 Johnsonville","d":"South along SH1 from Johnsonville Off-ramp","r":"Wellington","h":"SH1","la":"-41.227951","lo":"174.808116","o":0,"m":0},{"i":"794","n":"SH1 Kenepuru","d":"South along Transmission Gully Mwy from Kenepuru Interchange","r":"Wellington","h":"SH1","la":"-41.151869","lo":"174.844891","o":0,"m":0},{"i":"814","n":"SH1 Lawlors Rd","d":"Looking south, south of Lawlors Road.","r":"Wellington","h":"SH1","la":"-40.743007","lo":"175.171708","o":0,"m":0},{"i":"787","n":"SH1 Mackays Crossing","d":"South along Transmission Gully Mwy from Mackays Crossing Interchange","r":"Wellington","h":"SH1","la":"-40.971228","lo":"174.983048","o":0,"m":0},{"i":"804","n":"SH1 Makahuri","d":"North from south of the railway overpass bridge.","r":"Wellington","h":"SH1","la":"-40.82047","lo":"175.10235","o":0,"m":0},{"i":"227","n":"SH1 Newlands","d":"South along SH1 from Newlands Rd","r":"Wellington","h":"SH1","la":"-41.231877","lo":"174.809546","o":0,"m":0},{"i":"228","n":"SH1 Ngauranga Gorge","d":"South along SH1 in the Ngauranga Gorge","r":"Wellington","h":"SH1","la":"-41.241","lo":"174.809","o":0,"m":0},{"i":"807","n":"SH1 Old Hautere Rd","d":"North towards Otaki Offramp.","r":"Wellington","h":"SH1","la":"-40.78129","lo":"175.13856","o":0,"m":0},{"i":"233","n":"SH1 Otaki","d":"North along SH1 at Otaki","r":"Wellington","h":"SH1","la":"-40.762458","lo":"175.155501","o":0,"m":0},{"i":"808","n":"SH1 Otaki Gorge Rd","d":"South from the Otaki Gorge Road overpass bridge.","r":"Wellington","h":"SH1","la":"-40.77493","lo":"175.14481","o":0,"m":0},{"i":"809","n":"SH1 Otaki Rail Station","d":"North from Otaki Rail station.","r":"Wellington","h":"SH1","la":"-40.76431","lo":"175.15459","o":0,"m":0},{"i":"789","n":"SH1 Paekakariki","d":"South along Transmission Gully Mwy from Paekakariki Interchange","r":"Wellington","h":"SH1","la":"-40.982679","lo":"174.970742","o":0,"m":0},{"i":"791","n":"SH1 Pauatahanui North","d":"North along Transmission Gully Mwy from SH58  Pauatahanui Interchange","r":"Wellington","h":"SH1","la":"-41.112172","lo":"174.917842","o":0,"m":0},{"i":"790","n":"SH1 Pauatahanui South","d":"South along Transmission Gully Mwy from SH58  Pauatahanui Interchange","r":"Wellington","h":"SH1","la":"-41.11331","lo":"174.918456","o":0,"m":0},{"i":"810","n":"SH1 Rahui Rd","d":"South from Rahui Road overpass bridge .","r":"Wellington","h":"SH1","la":"-40.76149","lo":"175.15986","o":0,"m":0},{"i":"277","n":"SH1 Tawa","d":"North along SH1 north of Tawa Interchange","r":"Wellington","h":"SH1","la":"-41.177675","lo":"174.829953","o":0,"m":0},{"i":"230","n":"SH1 Tinakori Rd On-ramp","d":"North along Urban Mwy from Tinakori Rd On-ramp","r":"Wellington","h":"SH1","la":"-41.276291","lo":"174.773064","o":0,"m":0},{"i":"793","n":"SH1 Waitangirua North","d":"North along Transmission Gully Mwy from Waitangirua Interchange","r":"Wellington","h":"SH1","la":"-41.131795","lo":"174.90002","o":0,"m":0},{"i":"792","n":"SH1 Waitangirua South","d":"South along Transmission Gully Mwy from Waitangirua Interchange","r":"Wellington","h":"SH1","la":"-41.132137","lo":"174.901206","o":0,"m":0},{"i":"813","n":"SH1 Waitohu Stream","d":"Looking north, north Waitohu Stream bridge.","r":"Wellington","h":"SH1","la":"-40.74893","lo":"175.16644","o":0,"m":0},{"i":"282","n":"SH1/SH2 Interchange","d":"South along Urban Mwy from SH1/SH2 Interchange","r":"Wellington","h":"SH1","la":"-41.248069","lo":"174.813576","o":0,"m":0},{"i":"722","n":"SH2 Kennedy Good Bridge","d":"Looking south along SH2 toward Belmont","r":"Wellington","h":"SH2","la":"-41.189939","lo":"174.929934","o":0,"m":0},{"i":"278","n":"SH2 Melling","d":"South along SH2 at Melling Interchange","r":"Wellington","h":"SH2","la":"-41.203","lo":"174.907","o":1,"m":0},{"i":"232","n":"SH2 Petone","d":"South along SH2 from Petone Off-ramp","r":"Wellington","h":"SH2","la":"-41.224","lo":"174.86","o":0,"m":0},{"i":"720","n":"SH59 Airlie Road","d":"Looking north along SH59 toward Pukerua Bay","r":"Wellington","h":"SH59","la":"-41.057605","lo":"174.87605","o":0,"m":0},{"i":"279","n":"SH59 Paekakariki","d":"South along SH59 at Paekakariki","r":"Wellington","h":"SH59","la":"-40.999745","lo":"174.939671","o":0,"m":0},{"i":"637","n":"SH59 Paremata","d":"South along SH59 from Paremata Roundabout","r":"Wellington","h":"SH59","la":"-41.105628","lo":"174.868586","o":0,"m":0},{"i":"280","n":"SH59 Plimmerton","d":"North along SH59 from Plimmerton Roundabout","r":"Wellington","h":"SH59","la":"-41.083","lo":"174.869","o":0,"m":0},{"i":"719","n":"SH59 Pukerua Bay","d":"Looking north along SH59 toward Paekakariki","r":"Wellington","h":"SH59","la":"-41.0287516","lo":"174.8993504","o":0,"m":0},{"i":"802","n":"Stokes Valley Roundabout EB","d":"East along Stokes Valley Rd","r":"Wellington","h":"","la":"-41.160891","lo":"174.981314","o":0,"m":0},{"i":"801","n":"Stokes Valley Roundabout SB","d":"South along Eastern Hutt Rd","r":"Wellington","h":"","la":"-41.160856","lo":"174.981161","o":0,"m":0},{"i":"662","n":"SH6 Fox Glacier","d":"North along SH6 into Fox Glacier township","r":"West Coast","h":"SH6","la":"-43.466945","lo":"170.017262","o":0,"m":0},{"i":"664","n":"SH6 Franz Josef","d":"North along SH6 in Franz Josef township","r":"West Coast","h":"SH6","la":"-43.388934","lo":"170.181985","o":0,"m":0},{"i":"745","n":"SH6 Haast Bridge","d":"Looking North-Bound from Haast Junction to Haast River Bridge","r":"West Coast","h":"SH6","la":"-43.859501","lo":"169.044762","o":0,"m":0},{"i":"663","n":"SH6 Punakaiki","d":"South along SH6 at Punakaiki Pancake Rocks","r":"West Coast","h":"SH6","la":"-42.114842","lo":"171.330009","o":0,"m":0},{"i":"661","n":"SH7 Reefton","d":"West along SH7 (Broadway) towards Reefton","r":"West Coast","h":"SH7","la":"-42.119841","lo":"171.871253","o":0,"m":0},{"i":"643","n":"SH7/SH65 Springs Junction","d":"West along SH7 to SH65 at Springs Junction","r":"West Coast","h":"SH7","la":"-42.336047","lo":"172.183175","o":0,"m":0}]</script>
+
+<script>
+"use strict";
+/* ============================================================================
+   Webcam Wall — a single-file, no-build webcam dashboard.
+   Sources: NZTA/Waka Kotahi road cameras, hand-picked NZ YouTube live streams,
+   Windy webcams, and the online-australia.net NZ webcam directory.
+   ========================================================================== */
+
+const NZTA_IMG = id => `https://trafficnz.info/camera/${id}.jpg`;
+const NZTA_THUMB = id => `https://trafficnz.info/camera/thumb/${id}.jpg`;
+const NZTA_VIEW = id => `https://trafficnz.info/camera/view/${id}`;
+const STORE_KEY = "nzcamwall.v2";
+/* Built-in Windy key so the Windy list works with no setup. Paste your own in
+   Settings if you'd rather use a different one. */
+const DEFAULT_WINDY_KEY = "GmuQAUvm7JKP0wonSrCNK5dnR2hAIsSH";
+const WINDY_LIST_KEY = "nzcamwall.windy.list";
+const WINDY_LIST_TTL_MS = 8 * 60 * 1000;      // image tokens expire after 10 min
+const BUILD_ID = "9";           // app version shown in header, Settings + search receipt
+const MAX_RESULTS = 2000;      // effectively no cap: every match is shown
+const BACKUP_FORMAT = "webcam-wall-backup";
+const BACKUP_VERSION = 1;
+const BACKUP_SOURCES = new Set(["nzta", "windy", "youtube", "web", "custom"]);
+const BACKUP_FILTERS = new Set(["all", "nzta", "youtube", "web"]);
+
+/* ---- Curated NZ YouTube live streams (verified live + embeddable) ---------- */
+const YOUTUBE = [
+  { yt:"PaLDpyFxpXE", t:"Auckland Harbour & Skyline", ch:"Auckland City Views", r:"Auckland" },
+  { yt:"nLCMw_Fh0u0", t:"Auckland Viaduct Harbour & Bridge (4K)", ch:"Auckland Viaduct View", r:"Auckland" },
+  { yt:"Ql7graq0I9M", t:"Sky Tower & Auckland Harbour", ch:"SurveillanceMap", r:"Auckland" },
+  { yt:"eOnZBBVqwb0", t:"Raglan Bar", ch:"Raglan Sportfishing", r:"Waikato" },
+  { yt:"7N_KlxHzrkg", t:"Manu Bay, Raglan", ch:"Raglan Sportfishing", r:"Waikato" },
+  { yt:"AajdfhglWd8", t:"Lyall Bay, Wellington", ch:"John Young", r:"Wellington" },
+  { yt:"v7xySvhug0Y", t:"Wellington Airport", ch:"Camview NZ", r:"Wellington" },
+  { yt:"gfJ4wIhnULQ", t:"Nelson / Tasman (4K)", ch:"WISP Tasman", r:"Nelson-Tasman" },
+  { yt:"t0nYqriNf-w", t:"Castlepoint Lighthouse", ch:"Castlepoint Lighthouse", r:"Wairarapa" },
+  { yt:"KD-QM0txA0A", t:"Napier Port — Kororā cam 1", ch:"Napier Port", r:"Hawke's Bay" },
+  { yt:"7yjDFhhJdrY", t:"Napier Port — Kororā cam 2", ch:"Napier Port", r:"Hawke's Bay" },
+  { yt:"Mm_zVDDUeNA", t:"Royal Albatross Cam, Pukekura", ch:"DOC / Cornell Lab", r:"Otago" },
+  { yt:"J4oNJrCzyzU", t:"New Zealand Now (24/7 camera mix)", ch:"Earth Now", r:"New Zealand" }
+];
+
+
+/* Inline SVG icons — glyph fonts are unreliable for these symbols across OSes */
+const svg = (d, extra="") => `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
+const I = {
+  left:      svg('<path d="M10 3 5 8l5 5"/>'),
+  right:     svg('<path d="M6 3l5 5-5 5"/>'),
+  size:      svg('<path d="M6 2H2v4M10 2h4v4M2 10v4h4M14 10v4h-4"/>'),
+  refresh:   svg('<path d="M13.5 8a5.5 5.5 0 1 1-1.7-4"/><path d="M13.5 1.5v3h-3"/>'),
+  full:      svg('<path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>'),
+  close:     svg('<path d="M4 4l8 8M12 4l-8 8"/>')
+};
+
+/* ------------------------------- state ------------------------------------- */
+let state = { cams: [], settings: { windyKey: DEFAULT_WINDY_KEY, hideOffline:true, filter:"all" } };
+let nzta = [];                 // [{i,n,d,r,h,o,m}]
+let webcams = [];              // [{i,t,c,r,u,p,w}] from online-australia.net
+let webWindyIds = new Set();   // Windy ids the directory already covers (dedupe)
+let windy = [];                // [{id,t,c,r,img,link}]
+let query = "";
+let showAllResults = false;
+
+const $  = s => document.querySelector(s);
+const uidOf = (src, ref) => `${src}:${ref}`;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+/** Escape a value for use inside a quoted attribute selector, e.g. [data-uid="…"] */
+const attr = s => String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+const srcLabel = { nzta:"Road", windy:"Windy", youtube:"Live", web:"Local", custom:"Custom" };
+
+function save(){
+  let saved = true;
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch(e) {
+    saved = false;
+    toast("Couldn't save to this browser's storage (it may be full or blocked).");
+  }
+  updateCount();
+  return saved;
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return;
+    const p = JSON.parse(raw);
+    if(p && Array.isArray(p.cams)){
+      state.cams = p.cams;
+      state.settings = Object.assign(state.settings, p.settings || {});
+      if(typeof state.settings.windyKey !== "string") state.settings.windyKey = DEFAULT_WINDY_KEY;
+      // The Windy-only filter chip has been retired — Windy cams show under "All".
+      if(state.settings.filter === "windy") state.settings.filter = "all";
+    }
+  } catch(e){ /* corrupt state — start fresh */ }
+}
+function updateCount(){
+  const n = state.cams.length;
+  $("#cam-count-head").textContent = n ? `${n} camera${n === 1 ? "" : "s"} pinned` : "no cameras pinned yet";
+}
+function syncSearchSettings(){
+  $("#hide-offline").checked = state.settings.hideOffline !== false;
+  document.querySelectorAll(".chip[data-filter]").forEach(c =>
+    c.setAttribute("aria-pressed", String(c.dataset.filter === (state.settings.filter || "all"))));
+}
+
+/* ------------------------------- toast ------------------------------------- */
+let toastTimer;
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3200);
+}
+
+/* --------------------------- catalogue loading ------------------------------ */
+function bakedFrom(id){
+  try {
+    const txt = document.getElementById(id).textContent.trim();
+    return txt && txt !== "[]" ? JSON.parse(txt) : [];
+  } catch(e){ return []; }
+}
+const bakedCameras = () => bakedFrom("baked-cameras");
+const bakedWebcams = () => bakedFrom("baked-webcams");
+async function loadJsonFile(name){
+  // Same-origin file, so GitHub Pages serves it fine. Fails on file:// — we
+  // simply fall back to the copy baked into this page.
+  try {
+    const r = await fetch(`${name}?t=${Date.now()}`, { cache:"no-store" });
+    if(!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    if(Array.isArray(j) && j.length) return j;
+  } catch(e){ /* fall through */ }
+  return null;
+}
+async function initCameras(manual, quiet){
+  const baked = bakedCameras();
+  const fresh = await loadJsonFile("cameras.json");
+  nzta = (fresh && fresh.length) ? fresh : baked;
+  if(manual && !quiet) toast(nzta.length ? `Camera list reloaded — ${nzta.length} road cameras.` : "No camera list available.");
+  return nzta;
+}
+async function initWebcams(manual, quiet){
+  const baked = bakedWebcams();
+  const fresh = await loadJsonFile("webcams.json");
+  webcams = ((fresh && fresh.length) ? fresh : baked).map(c => (typeof c === "string" ? { i:c, t:c } : c));
+  webWindyIds = new Set(webcams.map(c => c.w).filter(Boolean).map(String));
+  if(manual && !quiet) toast(webcams.length ? `Local cams reloaded — ${webcams.length} from the directory.` : "No local webcam list available.");
+  renderSources();
+  return webcams;
+}
+function windyCache(){
+  try {
+    const j = JSON.parse(localStorage.getItem(WINDY_LIST_KEY) || "null");
+    return (j && j.cams && j.ts) ? j : null;
+  } catch(e){ return null; }
+}
+function windyCacheFresh(){
+  const c = windyCache();
+  return c && (Date.now() - c.ts) < WINDY_LIST_TTL_MS ? c : null;
+}
+
+/* ------------------------------- searching --------------------------------- */
+function catalogue(){
+  const out = [];
+  for(const c of nzta){
+    out.push({
+      source:"nzta", ref:String(c.i), name:c.n, sub:[c.h, c.d].filter(Boolean).join(" · "),
+      region:c.r, thumb:NZTA_THUMB(c.i), offline:!!c.o
+    });
+  }
+  for(const y of YOUTUBE){
+    out.push({ source:"youtube", ref:y.yt, name:y.t, sub:y.ch, region:y.r,
+               thumb:`https://i.ytimg.com/vi/${y.yt}/mqdefault.jpg`, offline:false });
+  }
+  // Local directory cams (council / surf club / community feeds)
+  for(const c of webcams){
+    if(!c.t) continue;
+    out.push({ source:"web", ref:String(c.i), name:c.t,
+               sub:[c.c, c.r].filter(Boolean).join(" · "), region:c.r,
+               thumb:c.u, offline:false, page:c.p });
+  }
+  for(const w of windy){
+    // If the directory already lists this camera (nicer title, keyless image),
+    // don't show it twice.
+    if(webWindyIds.has(String(w.id))) continue;
+    out.push({ source:"windy", ref:String(w.id), name:w.t, sub:w.c, region:w.r,
+               thumb:w.img, offline:false });
+  }
+  return out;
+}
+/** Lower-case and strip macrons/accents so "whangarei" finds "Whangārei". */
+const fold = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function matchScore(item, q){
+  if(!q) return 1;
+  const hay = fold(`${item.name} ${item.sub} ${item.region}`);
+  const words = fold(q).split(/\s+/).filter(Boolean);
+  let score = 0;
+  for(const w of words){
+    const idx = hay.indexOf(w);
+    if(idx === -1) return 0;                       // all words must appear
+    score += idx === 0 ? 3 : 1;
+  }
+  const n = fold(item.name), full = fold(q);
+  if(n.startsWith(full)) score += 5;
+  else if(n.includes(" " + full)) score += 2;      // matches a later word, e.g. "Bay of Plenty"
+  return score;
+}
+function runSearch(){
+  const filter = state.settings.filter;
+  const hideOff = state.settings.hideOffline;
+  const q = fold(query.trim());
+  let list = catalogue().filter(it => filter === "all" || it.source === filter);
+  if(hideOff) list = list.filter(it => !it.offline);
+  const scored = [];
+  for(const it of list){
+    const sc = matchScore(it, q);
+    if(sc > 0) scored.push([sc, it]);
+  }
+  scored.sort((a,b) => b[0] - a[0] || a[1].name.localeCompare(a[1].name, "en-NZ"));
+  renderResults(scored.map(x => x[1]), q);
+}
+function renderResults(items, q){
+  const box = $("#results");
+  const total = items.length;
+  const shown = showAllResults ? items : items.slice(0, MAX_RESULTS);
+  const c = $("#result-count");
+  c.textContent = total ? `${total} camera${total === 1 ? "" : "s"} found`
+                        : (q ? "no matches" : "");
+
+  if(!items.length){
+    box.innerHTML = `<div class="list-note" style="grid-column:1/-1">${noSourceHint(q)}</div>`;
+    const emptyNote = $("#results-note");
+    if(emptyNote){
+      emptyNote.textContent = q
+        ? `No cameras match “${query.trim()}” · build ${BUILD_ID}`
+        : `No cameras to show · build ${BUILD_ID}`;
+    }
+    return;
+  }
+  const cards = shown.map(it => {
+    const added = state.cams.some(cam => cam.uid === uidOf(it.source, it.ref));
+    return `<article class="card${added ? " added" : ""}" role="listitem">
+      <img class="thumb" src="${esc(it.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"
+           onerror="this.style.visibility='hidden'">
+      <div class="body">
+        <div class="name" title="${esc(it.name)}">${esc(it.name)}</div>
+        <div class="sub">${it.source === "youtube" ? '<span class="muted">still thumbnail · </span>' : ""}${it.offline ? '<span class="offline-dot">offline · </span>' : ""}${esc(it.sub || it.region || "")}</div>
+        <div class="foot">
+          <span class="badge ${it.source}">${srcLabel[it.source]}</span>
+          <button class="add-btn ${added ? "added" : ""}" data-add="${esc(it.source)}:${esc(it.ref)}"
+            ${added ? "disabled" : ""}>${added ? "Added ✓" : "Add"}</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+  const more = (!showAllResults && total > MAX_RESULTS)
+    ? `<button class="btn lg" id="show-more" style="grid-column:1/-1;justify-self:center">
+         Show all ${total} cameras</button>` : "";
+  box.innerHTML = cards + more;
+
+  // Plain-language receipt: every match is on screen, and which build you're on.
+  const note = $("#results-note");
+  if(note){
+    const searching = !!query.trim();
+    note.textContent = total
+      ? (shown.length === total
+          ? `Showing all ${total} camera${total === 1 ? "" : "s"}${searching ? ` matching “${query.trim()}”` : ""}`
+          : `Showing ${shown.length} of ${total} cameras`)
+        + ` — nothing is hidden · build ${BUILD_ID}`
+      : `No cameras to show · build ${BUILD_ID}`;
+  }
+}
+function noSourceHint(q){
+  if(q && !windy.length && state.settings.windyKey)
+    return "Nothing here yet. Windy's NZ list may still be loading — open ⚙ Settings and press “Reload Windy list”.";
+  return q ? `No cameras match “${esc(q)}”. Try a town, a highway, or a region.`
+           : "Start typing to search the camera list.";
+}
+function entryToCam(src, ref){
+  const it = catalogue().find(x => x.source === src && x.ref === ref);
+  if(!it) return null;
+  return {
+    uid: uidOf(src, ref), source: src, ref,
+    title: it.name, size: "m", added: Date.now(),
+    meta: { region: it.region, sub: it.sub, img: it.thumb, page: it.page }
+  };
+}
+
+/* ------------------------------- tiles ------------------------------------- */
+function mediaHtml(cam){
+  if(cam.source === "nzta")
+    return `<img src="${NZTA_IMG(cam.ref)}?t=${cam.added}" alt="${esc(cam.title)} road camera">
+            <div class="state" hidden></div>`;
+  if(cam.source === "youtube"){
+    if(location.protocol === "file:" || location.origin === "null")
+      return `<div class="state"><b>Open Webcam Wall on its website</b>YouTube needs the page's web address to play an embedded stream. Open the hosted HTTPS page, or tap Watch on YouTube ↗ below.</div>`;
+    return `<iframe src="https://www.youtube-nocookie.com/embed/${esc(cam.ref)}?rel=0&modestbranding=1"
+              title="${esc(cam.title)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
+  }
+  if(cam.source === "web"){
+    const c = webcams.find(x => String(x.i) === cam.ref);
+    const img = (c && c.u) || (cam.meta && cam.meta.img);
+    return img ? `<img src="${esc(img)}" alt="${esc(cam.title)} webcam"><div class="state" hidden></div>`
+               : `<div class="state"><b>Image unavailable</b>Press the refresh button to retry.</div>`;
+  }
+  if(cam.source === "windy"){
+    const w = windy.find(x => String(x.id) === cam.ref);
+    const img = w ? w.img : (cam.meta && cam.meta.img);
+    return img ? `<img src="${esc(img)}" alt="${esc(cam.title)} webcam"><div class="state" hidden></div>`
+               : `<div class="state"><b>Windy image</b>Press ↻ to fetch a fresh image link.</div>`;
+  }
+  // custom
+  if(cam.meta && cam.meta.type === "embed")
+    return `<iframe src="${esc(cam.meta.url)}" title="${esc(cam.title)}" loading="lazy"
+              referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; fullscreen"></iframe>`;
+  return `<img src="${esc(cam.meta && cam.meta.url)}" alt="${esc(cam.title)}"><div class="state" hidden></div>`;
+}
+function tileHtml(cam){
+  const w = cam.source === "windy" ? windy.find(x => String(x.id) === cam.ref) : null;
+  const link = cam.source === "nzta" ? NZTA_VIEW(cam.ref)
+            : cam.source === "youtube" ? `https://www.youtube.com/watch?v=${cam.ref}`
+            : cam.source === "windy" ? (w && w.link) || `https://www.windy.com/webcams/${cam.ref}`
+            : cam.source === "web" ? (cam.meta && cam.meta.page) || ((webcams.find(x => String(x.i) === cam.ref) || {}).p)
+            : (cam.meta && (cam.meta.link || cam.meta.url));
+  const off = cam.source === "nzta" && nzta.find(x => String(x.i) === cam.ref)?.o;
+  return `<article class="tile" data-uid="${esc(cam.uid)}" data-size="${cam.size || "m"}" draggable="true">
+    <div class="tile-head">
+      <span class="grip" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
+      <input class="tile-title" value="${esc(cam.title)}" aria-label="Camera title"
+             data-title="${esc(cam.uid)}" title="Click to rename">
+      <div class="tools">
+        <button data-act="left"  data-uid="${esc(cam.uid)}" title="Move left" aria-label="Move left">${I.left}</button>
+        <button data-act="right" data-uid="${esc(cam.uid)}" title="Move right" aria-label="Move right">${I.right}</button>
+        <button data-act="size"  data-uid="${esc(cam.uid)}" title="Tile size: small / medium / large" aria-label="Cycle tile size">${I.size}</button>
+        <button data-act="refresh" data-uid="${esc(cam.uid)}" title="Load a fresh frame" aria-label="Refresh camera">${I.refresh}</button>
+        <button data-act="full"  data-uid="${esc(cam.uid)}" title="Fullscreen this tile" aria-label="Fullscreen">${I.full}</button>
+        <button data-act="del"   data-uid="${esc(cam.uid)}" class="danger" title="Remove from the wall" aria-label="Remove camera">${I.close}</button>
+      </div>
+    </div>
+    <div class="tile-media" data-media="${esc(cam.uid)}">
+      ${mediaHtml(cam)}
+    </div>
+    <div class="tile-foot">
+      <span class="badge ${cam.source}">${srcLabel[cam.source]}</span>
+      <span class="src-meta">${off ? '<span class="offline-dot">● offline</span> · ' : ""}${esc((cam.meta && cam.meta.region) || "")}</span>
+      <span class="sp"></span>
+      <span class="stamp" data-stamp="${esc(cam.uid)}"></span>
+      ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener" title="Open the source page">${cam.source === "youtube" ? "Watch on YouTube ↗" : "source ↗"}</a>` : ""}
+    </div>
+  </article>`;
+}
+function renderWall(){
+  const grid = $("#grid");
+  grid.innerHTML = state.cams.map(tileHtml).join("");
+  $("#empty").classList.toggle("show", state.cams.length === 0);
+  updateCount();
+  stampAll();
+  wireImages();
+}
+function stampAll(){
+  const now = new Date().toLocaleTimeString("en-NZ", { hour:"2-digit", minute:"2-digit" });
+  document.querySelectorAll("[data-stamp]").forEach(el => { el.textContent = now; });
+}
+function wireImages(){
+  document.querySelectorAll(".tile-media img").forEach(img => {
+    img.addEventListener("error", () => showImgError(img));
+    const state = img.parentElement.querySelector(".state");
+    if(state) state.hidden = true;
+    img.addEventListener("load", () => { if(state) state.hidden = true; });
+  });
+}
+function showImgError(img){
+  const wrap = img.parentElement;
+  let state = wrap.querySelector(".state");
+  if(!state){
+    state = document.createElement("div");
+    state.className = "state";
+    wrap.appendChild(state);
+  }
+  state.hidden = false;
+  state.innerHTML = `<b>Image unavailable</b>
+    <span>Snapshot may be offline. If you're viewing this in an offline preview it will load once hosted.</span>
+    <span class="muted">Press ↻ to retry.</span>`;
+  img.style.visibility = "hidden";
+}
+
+/* --------------------------- tile interactions ------------------------------ */
+$("#grid").addEventListener("click", async e => {
+  const btn = e.target.closest("button[data-act]");
+  if(!btn) return;
+  const uid = btn.dataset.uid, cam = state.cams.find(c => c.uid === uid);
+  if(!cam) return;
+  const act = btn.dataset.act;
+
+  if(act === "del"){
+    state.cams = state.cams.filter(c => c.uid !== uid);
+    save(); renderWall(); renderResultsList(); toast("Camera removed.");
+  }
+  if(act === "size"){
+    cam.size = cam.size === "s" ? "m" : cam.size === "m" ? "l" : "s";
+    save();
+    document.querySelector(`.tile[data-uid="${attr(uid)}"]`)?.setAttribute("data-size", cam.size);
+  }
+  if(act === "left" || act === "right"){
+    const i = state.cams.indexOf(cam), j = act === "left" ? i - 1 : i + 1;
+    if(j >= 0 && j < state.cams.length){
+      state.cams.splice(i, 1);
+      state.cams.splice(j, 0, cam);
+      save(); renderWall(); wireDrag();
+    }
+  }
+  if(act === "refresh"){
+    await refreshCam(cam);
+  }
+  if(act === "full"){
+    const el = document.querySelector(`.tile[data-uid="${attr(uid)}"]`);
+    if(!el) return;
+    if(document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.().catch(() => toast("Fullscreen was blocked by the browser."));
+  }
+});
+
+/* renaming: save on change/blur, Enter commits, Escape reverts */
+$("#grid").addEventListener("input", e => {
+  if(!e.target.matches("input[data-title]")) return;
+  const cam = state.cams.find(c => c.uid === e.target.dataset.title);
+  if(cam) cam.title = e.target.value;
+});
+$("#grid").addEventListener("change", e => {
+  if(e.target.matches("input[data-title]")) save();
+});
+$("#grid").addEventListener("keydown", e => {
+  if(!e.target.matches("input[data-title]")) return;
+  if(e.key === "Enter"){ e.target.blur(); }
+  if(e.key === "Escape"){
+    const cam = state.cams.find(c => c.uid === e.target.dataset.title);
+    if(cam){ e.target.value = cam.title; e.target.blur(); }
+  }
+});
+
+/* ------------------------------- refreshing --------------------------------- */
+async function refreshCam(cam){
+  const media = document.querySelector(`[data-media="${attr(cam.uid)}"]`);
+  if(!media) return;
+  if(cam.source === "nzta"){
+    const img = media.querySelector("img") || media.insertBefore(document.createElement("img"), media.firstChild);
+    img.style.visibility = "visible";
+    img.src = `${NZTA_IMG(cam.ref)}?t=${Date.now()}`;
+  } else if(cam.source === "youtube"){
+    const frame = media.querySelector("iframe");
+    if(frame) frame.src = frame.src;                   // reload the stream
+  } else if(cam.source === "custom"){
+    const img = media.querySelector("img");
+    if(img){ img.style.visibility = "visible"; img.src = `${cam.meta.url}${cam.meta.url.includes("?") ? "&" : "?"}t=${Date.now()}`; }
+  } else if(cam.source === "web"){
+    const img = media.querySelector("img");
+    const base = (cam.meta && cam.meta.img) || "";
+    if(img && base){ img.style.visibility = "visible"; img.src = `${base}${base.includes("?") ? "&" : "?"}t=${Date.now()}`; }
+  } else if(cam.source === "windy"){
+    if(!state.settings.windyKey){ toast("Open ⚙ Settings and add your Windy API key first."); return; }
+    if(await refreshWindyTokens([cam])) { /* re-render happens inside */ }
+  }
+  const stamp = document.querySelector(`[data-stamp="${attr(cam.uid)}"]`);
+  if(stamp) stamp.textContent = new Date().toLocaleTimeString("en-NZ", { hour:"2-digit", minute:"2-digit" });
+}
+async function refreshAll(){
+  const btn = $("#btn-refresh-all");
+  btn.disabled = true;
+  const t = Date.now();
+  // One batched Windy token call for all Windy tiles (their image URLs expire)...
+  const windyCams = state.cams.filter(c => c.source === "windy");
+  if(windyCams.length && state.settings.windyKey) await refreshWindyTokens(windyCams);
+
+  // ...then bust the cache on every still image and restart every live embed.
+  for(const cam of state.cams){
+    const media = document.querySelector(`[data-media="${attr(cam.uid)}"]`);
+    if(!media) continue;
+    if(cam.source === "nzta"){
+      const img = media.querySelector("img");
+      if(img){ img.style.visibility = "visible"; img.src = `${NZTA_IMG(cam.ref)}?t=${t}`; }
+    } else if((cam.source === "custom" && cam.meta && cam.meta.type !== "embed") || cam.source === "web"){
+      const img = media.querySelector("img");
+      const base = cam.source === "web" ? ((cam.meta && cam.meta.img) || "") : cam.meta.url;
+      if(img && base){ img.style.visibility = "visible"; img.src = `${base}${base.includes("?") ? "&" : "?"}t=${t}`; }
+    } else if(cam.source === "youtube"){
+      const frame = media.querySelector("iframe");
+      if(frame) frame.src = frame.src;
+    }
+  }
+  stampAll();
+  btn.disabled = false;
+  toast(windyCams.length && !state.settings.windyKey
+    ? "Refreshed. Windy tiles need your API key to renew their image links."
+    : "All cameras refreshed.");
+}
+
+/* ------------------------------- Windy ------------------------------------- */
+async function windyFetch(path){
+  const key = state.settings.windyKey;
+  if(!key) throw new Error("No Windy API key saved.");
+  const r = await fetch(`https://api.windy.com/webcams/api/v3/${path}`, {
+    headers: { "x-windy-api-key": key }
+  });
+  if(r.status === 401) throw new Error("Windy says the API key is invalid (401).");
+  if(r.status === 403) throw new Error("Windy refused the request (403). Check the key is for the Webcams API.");
+  if(r.status === 429) throw new Error("Windy rate limit hit (429) — wait a minute and try again.");
+  if(!r.ok) throw new Error(`Windy error ${r.status}.`);
+  return r.json();
+}
+function windyStatus(msg, cls){ const el = $("#windy-status"); el.textContent = msg; el.className = `status ${cls || ""}`; }
+/** Sidebar one-liner + the Settings → Camera sources breakdown. */
+function renderSources(){
+  const live = nzta.filter(c => !c.o).length;
+  // Windy cams already listed by the local directory are shown once, so don't count them twice.
+  const dupes = windy.filter(w => webWindyIds.has(String(w.id))).length;
+  const total = nzta.length + webcams.length + YOUTUBE.length + windy.length - dupes;
+  const wind = windy.length ? "connected"
+             : (state.settings.windyKey ? "loading…" : "not connected");
+  const list = $("#src-list");
+  if(!list) return;
+  const rows = [
+    ["Road cameras", "NZTA / Waka Kotahi state highways", `${live} online of ${nzta.length}`],
+    ["Local cams", "online-australia.net directory", `${webcams.length}`],
+    ["Live video", "NZ YouTube streams", `${YOUTUBE.length}`],
+    ["Windy webcams", "Windy.com (API key)", wind],
+    ...(dupes ? [["Duplicate cameras", "shown once when a camera is listed twice", "merged"]] : [])
+  ];
+  list.innerHTML = rows.map(([t, sub, n]) =>
+    `<div class="src-row"><b>${esc(t)}</b><span class="muted" style="font-size:13px">${esc(sub)}</span>`
+    + `<span class="n">${esc(n)}</span></div>`).join("");
+}
+/** Windy's list endpoint has returned both `{webcams:[…]}` and a bare array in the wild. */
+function windyArray(j){
+  if(Array.isArray(j)) return j;
+  if(j && Array.isArray(j.webcams)) return j.webcams;
+  return [];
+}
+
+async function windyLoadList(force){
+  if(!state.settings.windyKey){ windyStatus("Enter your Windy API key first.", "err"); return; }
+  if(!force){
+    const fresh = windyCacheFresh();
+    if(fresh){
+      windy = fresh.cams;
+      document.body.dataset.windy = "loaded";
+      windyStatus("Windy is connected (using the saved list).", "ok");
+      renderSources(); runSearch(); return;
+    }
+  }
+  windyStatus("Connecting to Windy…");
+  try {
+    const inc = "images,location,urls";
+    const first = await windyFetch(`webcams?countries=NZ&limit=50&offset=0&include=${inc}&lang=en`);
+    let all = windyArray(first);
+    const total = typeof first.total === "number" ? Math.min(first.total, 1000)   // free tier offset cap
+                                                  : null;
+    if(total !== null){
+      const pages = Math.ceil(total / 50);
+      const jobs = [];
+      for(let p = 1; p < pages; p++) jobs.push(p);
+      const BATCH = 4;
+      for(let i = 0; i < jobs.length; i += BATCH){
+        const chunk = await Promise.all(jobs.slice(i, i + BATCH).map(p =>
+          windyFetch(`webcams?countries=NZ&limit=50&offset=${p * 50}&include=${inc}&lang=en`)
+            .then(j => windyArray(j)).catch(() => [])
+        ));
+        chunk.forEach(c => all.push(...c));
+        windyStatus("Loading Windy's New Zealand webcams…");
+      }
+    } else {
+      // The response didn't tell us a total — walk pages until one comes back short.
+      while(all.length % 50 === 0 && all.length < 1000){
+        const j = await windyFetch(`webcams?countries=NZ&limit=50&offset=${all.length}&include=${inc}&lang=en`);
+        const arr = windyArray(j);
+        all.push(...arr);
+        windyStatus("Loading Windy's New Zealand webcams…");
+        if(arr.length < 50) break;
+      }
+    }
+    windy = all.filter(w => w.status !== "inactive").map(normaliseWindy);
+    try { localStorage.setItem(WINDY_LIST_KEY, JSON.stringify({ ts: Date.now(), cams: windy })); } catch(e){}
+    windyStatus("Windy is connected — its cameras are in your search.", "ok");
+    document.body.dataset.windy = "loaded";
+    renderSources();
+    runSearch();
+  } catch(err){
+    windyStatus(err.message, "err");
+  }
+}
+function normaliseWindy(w){
+  const pick = o => (o && (o.preview || o.thumbnail || o.icon)) || "";
+  const cur = (w.images && w.images.current) || {};
+  const day = (w.images && w.images.daylight) || {};
+  const img = pick(cur) || pick(day);
+  const loc = w.location || {};
+  return {
+    id: w.webcamId,
+    t: w.title || `Windy webcam ${w.webcamId}`,
+    c: loc.city || loc.region || "",
+    r: loc.region || loc.country || "",
+    img,
+    link: (w.urls && w.urls.detail) || `https://www.windy.com/webcams/${w.webcamId}`
+  };
+}
+/** Re-fetch tokenised image URLs for specific Windy cams (tokens expire ~10 min). */
+async function refreshWindyTokens(cams){
+  try {
+    const ids = cams.map(c => c.ref).join(",");
+    const j = await windyFetch(`webcams?webcamIds=${ids}&include=images,location,urls&lang=en`);
+    const fresh = windyArray(j).map(normaliseWindy);
+    let touched = false;
+    for(const f of fresh){
+      const idx = windy.findIndex(w => String(w.id) === String(f.id));
+      if(idx > -1) windy[idx] = f; else windy.push(f);
+      const cam = state.cams.find(c => c.source === "windy" && c.ref === String(f.id));
+      if(cam){
+        cam.meta = Object.assign({}, cam.meta, { img: f.img });
+        const img = document.querySelector(`[data-media="${attr(cam.uid)}"] img`);
+        if(img){ img.style.visibility = "visible"; img.src = f.img; }
+        touched = true;
+      }
+    }
+    save();
+    if(!touched) toast("Windy returned no images for those cameras.");
+    return true;
+  } catch(err){
+    if(cams.length === 1) toast(err.message);
+    return false;
+  }
+}
+
+/* ------------------------------ add / remove -------------------------------- */
+function addByUid(uid){
+  const [src, ...rest] = uid.split(":");
+  const ref = rest.join(":");
+  if(state.cams.some(c => c.uid === uid)) return;
+  const cam = entryToCam(src, ref);
+  if(!cam){ toast("That camera is no longer in the list."); return; }
+  const w = src === "windy" ? windy.find(x => String(x.id) === ref) : null;
+  if(w) cam.meta = Object.assign({}, cam.meta, { img: w.img });
+  state.cams.push(cam);
+  save(); renderWall(); wireDrag();
+  goHome();                                   // adding a camera takes you back to the wall
+  flashTile(cam.uid);
+  toast(`Added “${cam.title}” to your wall. Click its title to rename it.`);
+}
+function flashTile(uid){
+  // Never let a cosmetic touch (scroll/flash) break navigation or adding.
+  try {
+    const el = document.querySelector(`.tile[data-uid="${attr(uid)}"]`);
+    if(!el) return;
+    el.classList.add("flash");
+    setTimeout(() => el.classList.remove("flash"), 1900);
+    if(typeof el.scrollIntoView === "function") el.scrollIntoView({ block:"nearest", behavior:"smooth" });
+  } catch(e){ /* ignore */ }
+}
+function renderResultsList(){ runSearch(); }
+
+/* ------------------------------- drag & drop -------------------------------- */
+let dragUid = null;
+function wireDrag(){
+  const grid = $("#grid");
+  grid.querySelectorAll(".tile").forEach(tile => {
+    tile.addEventListener("dragstart", e => {
+      dragUid = tile.dataset.uid;
+      tile.classList.add("dragging");
+      try {
+        if(e.dataTransfer){
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", dragUid);
+        }
+      } catch(_){ /* some browsers guard dataTransfer on non-drag sources */ }
+    });
+    tile.addEventListener("dragend", () => {
+      tile.classList.remove("dragging");
+      document.querySelectorAll(".drop-target").forEach(t => t.classList.remove("drop-target"));
+      dragUid = null;
+    });
+    tile.addEventListener("dragover", e => {
+      if(!dragUid || tile.dataset.uid === dragUid) return;
+      e.preventDefault();
+      tile.classList.add("drop-target");
+    });
+    tile.addEventListener("dragleave", () => tile.classList.remove("drop-target"));
+    tile.addEventListener("drop", e => {
+      e.preventDefault();
+      tile.classList.remove("drop-target");
+      if(!dragUid || tile.dataset.uid === dragUid) return;
+      const from = state.cams.findIndex(c => c.uid === dragUid);
+      const to   = state.cams.findIndex(c => c.uid === tile.dataset.uid);
+      if(from < 0 || to < 0) return;
+      const [moved] = state.cams.splice(from, 1);
+      state.cams.splice(to, 0, moved);
+      save(); renderWall(); wireDrag();
+    });
+  });
+}
+
+/* ------------------------------- search page UI ------------------------------ */
+$("#q").addEventListener("input", e => { query = e.target.value; showAllResults = false; runSearch(); });
+$("#results").addEventListener("click", e => {
+  if(e.target.id === "show-more"){ showAllResults = true; runSearch(); return; }
+  const btn = e.target.closest("[data-add]");
+  if(btn) addByUid(btn.dataset.add);
+});
+document.querySelectorAll(".chip[data-filter]").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip[data-filter]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+    state.settings.filter = chip.dataset.filter;
+    showAllResults = false;
+    save(); runSearch();
+  });
+});
+$("#hide-offline").addEventListener("change", e => {
+  state.settings.hideOffline = e.target.checked;
+  save(); runSearch();
+});
+$("#btn-refresh-all").addEventListener("click", refreshAll);
+$("#btn-reload-list").addEventListener("click", async () => {
+  await initCameras(true, true);
+  await initWebcams(true, true);
+  renderSources();
+  runSearch();
+  toast(`Camera lists reloaded — ${nzta.length} road cams, ${webcams.length} local cams.`);
+});
+$("#btn-clear-all").addEventListener("click", () => {
+  if(!state.cams.length) return;
+  if(confirm("Remove every camera from your wall? This can't be undone.")){
+    state.cams = [];
+    save(); renderWall(); runSearch();
+  }
+});
+$("#btn-windy-connect").addEventListener("click", async () => {
+  const key = $("#windy-key").value.trim();
+  if(!key){ windyStatus("Paste your API key first.", "err"); return; }
+  state.settings.windyKey = key; save();
+  windyStatus("Checking the key with Windy…");
+  try {
+    const j = await windyFetch("webcams?countries=NZ&limit=1&include=location&lang=en");
+    windyStatus("Key works. Loading Windy's New Zealand webcams…", "ok");
+    await windyLoadList(true);
+    renderSources();
+  } catch(err){ windyStatus(err.message, "err"); }
+});
+$("#btn-windy-load").addEventListener("click", () => {
+  if($("#windy-key").value.trim() && $("#windy-key").value.trim() !== state.settings.windyKey){
+    state.settings.windyKey = $("#windy-key").value.trim(); save();
+  }
+  windyLoadList(true);
+});
+$("#btn-windy-forget").addEventListener("click", () => {
+  state.settings.windyKey = "";
+  localStorage.removeItem(WINDY_LIST_KEY);
+  windy = []; $("#windy-key").value = "";
+  save(); runSearch(); renderSources();
+  windyStatus("Key forgotten and the cached Windy list cleared. Press “Use built-in key” to restore it.", "");
+});
+$("#btn-windy-default").addEventListener("click", async () => {
+  state.settings.windyKey = DEFAULT_WINDY_KEY;
+  $("#windy-key").value = DEFAULT_WINDY_KEY;
+  save();
+  windyStatus("Using the built-in key — connecting to Windy…");
+  await windyLoadList(true);
+  renderSources();
+});
+
+/* -------------------------- backup and restore ------------------------------ */
+function backupText(value, max=500){
+  return typeof value === "string"
+    ? value.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, max)
+    : "";
+}
+function backupUrl(value, field, required=false){
+  if(value == null || value === ""){
+    if(required) throw new Error(`${field} is missing.`);
+    return "";
+  }
+  if(typeof value !== "string" || value.length > 4096) throw new Error(`${field} is not a valid web address.`);
+  let url;
+  try { url = new URL(value.trim()); }
+  catch(e){ throw new Error(`${field} is not a valid web address.`); }
+  if(url.protocol !== "https:" && url.protocol !== "http:")
+    throw new Error(`${field} must start with http:// or https://.`);
+  return url.href;
+}
+function makeBackupPayload(){
+  const cameras = state.cams.map(cam => {
+    const meta = cam.meta && typeof cam.meta === "object" ? cam.meta : {};
+    const item = {
+      source: cam.source,
+      ref: String(cam.ref ?? ""),
+      title: backupText(String(cam.title ?? "Camera")),
+      size: ["s", "m", "l"].includes(cam.size) ? cam.size : "m"
+    };
+    const region = backupText(meta.region, 160);
+    const description = backupText(meta.sub, 300);
+    if(region) item.region = region;
+    if(description) item.description = description;
+    if(cam.source === "custom"){
+      item.type = meta.type === "embed" ? "embed" : "image";
+      item.url = backupUrl(meta.url, "Custom camera URL", true);
+      const link = backupUrl(meta.link, "Custom camera source link");
+      if(link) item.link = link;
+    } else if(cam.source === "web"){
+      const imageUrl = backupUrl(meta.img, "Local camera image URL");
+      const sourceUrl = backupUrl(meta.page, "Local camera source page");
+      if(imageUrl) item.imageUrl = imageUrl;
+      if(sourceUrl) item.sourceUrl = sourceUrl;
+    }
+    // Windy image URLs contain short-lived tokens; camera IDs are enough to
+    // renew them after restore with the API key already in that browser.
+    return item;
+  });
+  const filter = BACKUP_FILTERS.has(state.settings.filter) ? state.settings.filter : "all";
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    app: "Webcam Wall",
+    createdAt: new Date().toISOString(),
+    cameras,
+    preferences: {
+      hideOffline: state.settings.hideOffline !== false,
+      filter
+    }
+  };
+}
+function parseBackup(text){
+  if(typeof text !== "string" || !text.trim()) throw new Error("Paste backup text or choose a backup file first.");
+  if(text.length > 5 * 1024 * 1024) throw new Error("That backup is larger than 5 MB and can't be opened here.");
+  let data;
+  try { data = JSON.parse(text); }
+  catch(e){ throw new Error("That isn't valid backup text. Copy the full text or choose the .json file."); }
+  if(!data || data.format !== BACKUP_FORMAT || data.version !== BACKUP_VERSION || !Array.isArray(data.cameras))
+    throw new Error("This isn't a Webcam Wall backup the app recognises.");
+  if(data.cameras.length > 5000) throw new Error("This backup contains more than 5,000 cameras and can't be restored.");
+
+  const seen = new Set();
+  const cams = data.cameras.map((item, index) => {
+    const place = `Camera ${index + 1}`;
+    if(!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`${place} is not a valid camera entry.`);
+    const source = item.source;
+    if(!BACKUP_SOURCES.has(source)) throw new Error(`${place} has an unsupported camera source.`);
+    const title = backupText(typeof item.title === "string" ? item.title : "", 500);
+    const size = ["s", "m", "l"].includes(item.size) ? item.size : "m";
+    if(source === "custom"){
+      if(item.type !== "image" && item.type !== "embed") throw new Error(`${place} has an unsupported custom-camera type.`);
+      const url = backupUrl(item.url, `${place} URL`, true);
+      const link = backupUrl(item.link, `${place} source link`);
+      return {
+        uid: `custom:${Date.now().toString(36)}${Math.random().toString(36).slice(2,8)}`,
+        source, ref: "custom", title: title.trim() ? title : "Custom camera", size,
+        added: Date.now() + index,
+        meta: { url, link: link || url, type: item.type, region: "Custom" }
+      };
+    }
+
+    if(typeof item.ref !== "string") throw new Error(`${place} is missing its camera ID.`);
+    const ref = item.ref.trim();
+    if(!ref || ref.length > 200 || !/^[A-Za-z0-9_-]+$/.test(ref))
+      throw new Error(`${place} has an invalid camera ID.`);
+    if((source === "nzta" || source === "windy") && !/^\d{1,20}$/.test(ref))
+      throw new Error(`${place} has an invalid ${source === "nzta" ? "road" : "Windy"} camera ID.`);
+    if(source === "youtube" && !/^[A-Za-z0-9_-]{6,40}$/.test(ref))
+      throw new Error(`${place} has an invalid YouTube ID.`);
+    const key = `${source}:${ref}`;
+    if(seen.has(key)) throw new Error(`This backup lists ${source} camera ${ref} more than once.`);
+    seen.add(key);
+
+    const meta = {};
+    const region = backupText(typeof item.region === "string" ? item.region : "", 160);
+    const description = backupText(typeof item.description === "string" ? item.description : "", 300);
+    if(region) meta.region = region;
+    if(description) meta.sub = description;
+    if(source === "web"){
+      const imageUrl = backupUrl(item.imageUrl, `${place} image URL`);
+      const sourceUrl = backupUrl(item.sourceUrl, `${place} source page`);
+      if(imageUrl) meta.img = imageUrl;
+      if(sourceUrl) meta.page = sourceUrl;
+    }
+    return {
+      uid: uidOf(source, ref), source, ref,
+      title: title.trim() ? title : ref,
+      size, added: Date.now() + index, meta
+    };
+  });
+  const preferences = data.preferences && typeof data.preferences === "object" ? data.preferences : {};
+  return {
+    cams,
+    preferences: {
+      hideOffline: typeof preferences.hideOffline === "boolean" ? preferences.hideOffline : true,
+      filter: BACKUP_FILTERS.has(preferences.filter) ? preferences.filter : "all"
+    }
+  };
+}
+function backupMessage(message, kind=""){
+  const el = $("#backup-status");
+  el.textContent = message;
+  el.className = `status ${kind}`;
+}
+function syncBackupButtons(){
+  const hasText = !!$("#backup-text").value.trim();
+  $("#btn-backup-copy").hidden = !hasText;
+  $("#btn-backup-download").hidden = !hasText;
+  $("#btn-backup-restore").disabled = !hasText;
+}
+$("#btn-backup-create").addEventListener("click", () => {
+  try {
+    const backup = makeBackupPayload();
+    $("#backup-text").value = JSON.stringify(backup, null, 2);
+    syncBackupButtons();
+    backupMessage(`Backup ready — ${backup.cameras.length} camera${backup.cameras.length === 1 ? "" : "s"}. Copy the text or download the .json file and keep it somewhere safe.`, "ok");
+  } catch(err){ backupMessage(err.message || "Couldn't create the backup.", "err"); }
+});
+$("#backup-text").addEventListener("input", syncBackupButtons);
+$("#btn-backup-copy").addEventListener("click", async () => {
+  const field = $("#backup-text"), text = field.value;
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      backupMessage("Backup copied. Save it in Notes, email, or another safe place.", "ok");
+      return;
+    }
+  } catch(e){ /* use the selection fallback below */ }
+  field.focus(); field.select();
+  try { field.setSelectionRange(0, field.value.length); } catch(e){}
+  let copied = false;
+  try { copied = document.execCommand("copy"); } catch(e){}
+  backupMessage(copied
+    ? "Backup copied. Save it in Notes, email, or another safe place."
+    : "Backup text is selected. Use your device's Copy command, then save it somewhere safe.", copied ? "ok" : "");
+});
+$("#btn-backup-download").addEventListener("click", () => {
+  const text = $("#backup-text").value;
+  if(!text.trim()) return;
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const blob = new Blob([text.trim() + "\n"], { type:"application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url; link.download = `webcam-wall-backup-${date}.json`;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  backupMessage("Backup file downloaded. Keep it somewhere safe.", "ok");
+});
+$("#btn-backup-file").addEventListener("click", () => $("#backup-file").click());
+$("#backup-file").addEventListener("change", async e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try {
+    if(file.size > 5 * 1024 * 1024) throw new Error("That file is larger than 5 MB.");
+    $("#backup-text").value = await file.text();
+    syncBackupButtons();
+    backupMessage(`${file.name} loaded. Press “Restore backup” to review and restore it.`);
+  } catch(err){ backupMessage(err.message || "Couldn't read that file.", "err"); }
+  e.target.value = "";
+});
+$("#btn-backup-restore").addEventListener("click", async () => {
+  let backup;
+  try { backup = parseBackup($("#backup-text").value); }
+  catch(err){ backupMessage(err.message || "Couldn't read that backup.", "err"); return; }
+  const current = state.cams.length;
+  const incoming = backup.cams.length;
+  const prompt = `Restore ${incoming} camera${incoming === 1 ? "" : "s"} from this backup?\n\nThis replaces the ${current} camera${current === 1 ? "" : "s"} currently on your wall. Your current Windy API key will be kept.`;
+  if(!confirm(prompt)) return;
+  const previous = state;
+  state = {
+    cams: backup.cams,
+    settings: {
+      ...previous.settings,
+      hideOffline: backup.preferences.hideOffline,
+      filter: backup.preferences.filter
+    }
+  };
+  if(!save()){
+    state = previous;
+    renderWall(); wireDrag(); syncSearchSettings(); runSearch();
+    backupMessage("The browser couldn't save the restored wall, so your existing wall was kept.", "err");
+    return;
+  }
+  renderWall(); wireDrag(); syncSearchSettings(); runSearch(); renderSources();
+  const countText = `${incoming} camera${incoming === 1 ? "" : "s"}`;
+  const windyCams = state.cams.filter(cam => cam.source === "windy");
+  if(windyCams.length && state.settings.windyKey){
+    backupMessage(`Restored ${countText}. Renewing Windy image links…`, "ok");
+    const refreshed = await refreshWindyTokens(windyCams);
+    renderWall(); wireDrag(); runSearch();
+    backupMessage(`Restored ${countText}. ${refreshed ? "Windy image links were refreshed." : "Windy images could not be renewed just now; use Refresh later."}`, refreshed ? "ok" : "err");
+  } else if(windyCams.length){
+    backupMessage(`Restored ${countText}. No Windy API key is saved in this browser; open Settings to connect Windy and refresh those images.`, "ok");
+  } else {
+    backupMessage(`Restored ${countText}. Your current Windy API key was not changed.`, "ok");
+  }
+  toast(`Wall restored — ${countText}.`);
+});
+
+/* ------------------------------- settings modal ----------------------------- */
+function openSettings(){
+  $("#windy-key").value = state.settings.windyKey || "";
+  $("#settings-backdrop").classList.add("show");
+  renderSources();
+  setTimeout(() => $("#windy-key").focus(), 60);
+}
+function closeSettings(){ $("#settings-backdrop").classList.remove("show"); }
+$("#btn-settings").addEventListener("click", openSettings);
+
+$("#settings-close").addEventListener("click", closeSettings);
+$("#settings-backdrop").addEventListener("click", e => { if(e.target.id === "settings-backdrop") closeSettings(); });
+document.addEventListener("keydown", e => {
+  if(e.key !== "Escape") return;
+  const modalOpen = $("#settings-backdrop").classList.contains("show")
+                 || $("#modal-backdrop").classList.contains("show");
+  closeSettings();
+  if($("#modal-backdrop").classList.contains("show")) closeModal();
+  if(!modalOpen && viewFromHash() === "search") goHome();   // Esc also leaves the search page
+});
+
+/* ------------------------------- modal -------------------------------------- */
+let modalType = "auto";
+function openModal(){ $("#modal-backdrop").classList.add("show"); $("#m-title").focus(); }
+function closeModal(){ $("#modal-backdrop").classList.remove("show"); $("#m-url").value = ""; $("#m-title").value = ""; }
+$("#btn-add-url").addEventListener("click", openModal);
+$("#m-cancel").addEventListener("click", closeModal);
+$("#modal-backdrop").addEventListener("click", e => { if(e.target.id === "modal-backdrop") closeModal(); });
+document.querySelectorAll(".seg .chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    modalType = chip.dataset.type;
+    document.querySelectorAll(".seg .chip").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+  });
+});
+function parseTarget(raw){
+  const s = raw.trim();
+  let m = s.match(/<iframe[^>]*src=["']([^"']+)["']/i);
+  if(m) return { type:"embed", url:m[1], link:m[1] };
+  const yt = s.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+  if(yt) return { type:"embed", url:`https://www.youtube-nocookie.com/embed/${yt[1]}?rel=0`,
+                  link:`https://www.youtube.com/watch?v=${yt[1]}` };
+  if(/\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(s)) return { type:"image", url:s, link:s };
+  return { type:"embed", url:s, link:s };
+}
+$("#m-save").addEventListener("click", () => {
+  const title = $("#m-title").value.trim() || "Custom camera";
+  const raw = $("#m-url").value.trim();
+  if(!raw){ toast("Paste a URL or embed code first."); return; }
+  let target = parseTarget(raw);
+  if(modalType !== "auto") target = { type: modalType, url: target.url, link: target.link };
+  state.cams.push({
+    uid: `custom:${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`,
+    source:"custom", ref:"custom", title, size:"m", added:Date.now(),
+    meta:{ url: target.url, link: target.link, type: target.type, region:"Custom" }
+  });
+  const added = state.cams[state.cams.length - 1];
+  save(); renderWall(); wireDrag(); closeModal();
+  goHome();
+  flashTile(added && added.uid);
+  toast("Custom camera added to your wall.");
+});
+
+/* ------------------------------- views / routing ---------------------------- */
+/* Home = your wall. Search = the full-page camera browser. The current view
+   lives in the URL hash, so the browser Back/Forward buttons just work. */
+const viewFromHash = () => (location.hash.replace(/^#\/?/, "") === "search" ? "search" : "home");
+
+function applyView(v){
+  document.body.dataset.view = v;
+  const home = $("#view-home"), search = $("#view-search");
+  if(home) home.hidden = v !== "home";
+  if(search) search.hidden = v !== "search";
+  $("#btn-home").hidden = v !== "search";
+  $("#btn-search").hidden = v === "search";
+  try { window.scrollTo(0, 0); } catch(e){ /* ignore */ }
+  if(v === "search"){
+    showAllResults = false;
+    runSearch();
+    setTimeout(() => $("#q").focus(), 80);
+  }
+  document.title = v === "search" ? "Search cameras — Webcam Wall" : "Webcam Wall";
+}
+function goSearch(){
+  closeSettings();
+  if(viewFromHash() !== "search") location.hash = "search";
+  else applyView("search");
+}
+function goHome(){
+  closeSettings();
+  if(viewFromHash() !== "home") location.hash = "home";
+  else applyView("home");
+}
+window.addEventListener("hashchange", () => applyView(viewFromHash()));
+$("#btn-search").addEventListener("click", goSearch);
+$("#btn-search-empty").addEventListener("click", goSearch);
+$("#btn-home").addEventListener("click", goHome);
+$("#brand").addEventListener("click", goHome);
+
+/* keep the sticky search bar sitting flush under the header */
+function syncHeadHeight(){
+  const h = document.querySelector(".app-header");
+  if(h) document.documentElement.style.setProperty("--head-h", h.offsetHeight + "px");
+}
+window.addEventListener("resize", syncHeadHeight);
+
+/* ------------------------------- boot --------------------------------------- */
+(async function boot(){
+  load();
+  const version = $("#brand-version");
+  if(version) version.textContent = `v${BUILD_ID}`;
+  $("#windy-key").value = state.settings.windyKey || "";
+  renderSources();
+  syncSearchSettings();
+  const cached = windyCache();
+  if(cached) windy = cached.cams;
+
+  renderWall();
+  wireDrag();
+  await initCameras(false);
+  await initWebcams(false);
+  renderSources();
+  syncHeadHeight();
+  const bid = $("#build-id");
+  if(bid) bid.textContent = `build ${BUILD_ID}`;
+  document.body.dataset.build = BUILD_ID;
+  document.body.dataset.ready = "1";
+  try { console.log(`Webcam Wall — build ${BUILD_ID}`); } catch(e){}
+  applyView(viewFromHash());
+  if(state.settings.windyKey) windyLoadList(false);      // refresh tokens in the background
+})();
+</script>
+</body>
+</html>

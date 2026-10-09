@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+.cache/
+.local/
+.npm/
+.sudo_as_admin_successful
